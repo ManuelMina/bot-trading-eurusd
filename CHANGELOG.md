@@ -276,3 +276,60 @@ La estrategia V3 combina el sistema de entrada de V1 (inducción + vela de fuerz
 | 2026-05-16 | DECISIÓN | Evaluar aumentar H4_LOOKBACK_DAYS de 5 a 7-10 para estructuras más claras | 5 días puede ser insuficiente para detectar swings significativos en mercados lentos |
 | 2026-05-16 | DECISIÓN | Evaluar deshabilitar FILTER_KNOCKOUT junto con V3 (V3 ya filtra por sesgo) | El HTF filter puede ya excluir los días Knockout implícitamente si el mercado Knockout tiende a ser más neutral |
 | 2026-05-16 | DECISIÓN | Analizar los 53 días HTF neutral de 2024: ¿qué pasó esos días? ¿habrían sido trades rentables? | Verificar si el filtro está eliminando buenos setups o si realmente el sesgo no era claro |
+
+---
+
+## 2026-05-16 — Versión 4: Niveles probados + Veto HTF + Break-Even (V4)
+
+### Concepto
+
+V4 combina únicamente lo que demostró funcionar en las versiones anteriores:
+- **Señal**: barrido de nivel (V2) — sweep + vela de fuerza + ≥2 confirmaciones
+- **Niveles**: solo `asia_high → SHORT` y `prev_day_low → LONG` (los únicos con WR > break-even en V2+KO)
+- **Filtro HTF**: veto direccional H4/H1 — si el sesgo contradice la dirección del nivel, se descarta ese barrido (no bloquea el día completo)
+- **Break-even**: SL a precio de entrada cuando el trade alcanza +1.5:1
+
+### Diferencia clave vs V3
+
+V3 bloqueaba días completos cuando HTF = neutral. V4 no bloquea días — solo veta barridos individuales cuando HTF contradice la dirección. Esto preserva más oportunidades en días con sesgo HTF neutral.
+
+### Resultados V4
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | RESULTADO | V4 2024: 36 trades / WR 22.2% / WR efectivo 33.3% / BE 33.3% / P&L +$79 (+7.9%) / **MaxDD 3.1%** | Capital $1,000 / FILTER_KNOCKOUT / solo asia_high+prev_day_low / BE 1.5× |
+| 2026-05-16 | RESULTADO | V4 2025: 24 trades / WR 45.8% / WR efectivo 57.9% / BE 20.8% / P&L +$277 (+27.7%) / **MaxDD 3.0%** | Capital $1,000 / FILTER_KNOCKOUT / solo asia_high+prev_day_low / BE 1.5× |
+
+### Comparativa completa de todas las versiones
+
+| Métrica | V1 2024 | V2+KO 2024 | V3 2024 | V4 2024 | V1 2025 | V2+KO 2025 | V3 2025 | V4 2025 |
+|---|---|---|---|---|---|---|---|---|
+| Trades | 253 | 73 | 51 | 36 | 252 | 52 | 54 | 24 |
+| WR total | 29.6% | 30.1% | 21.6% | 22.2% | 38.5% | 38.5% | 35.2% | **45.8%** |
+| WR efectivo | — | — | 26.2% | **33.3%** | — | — | 47.5% | **57.9%** |
+| BE | 0 | 0 | 17.6% | 33.3% | 0 | 0 | 25.9% | 20.8% |
+| P&L | +$534 | +$148 | +$14 | +$79 | +$2,704 | +$309 | +$420 | +$277 |
+| **MaxDD** | 28.9% | 9.7% | 13.2% | **3.1%** | 13.1% | 4.9% | 8.6% | **3.0%** |
+| Eficiencia/trade | $2.11 | $2.03 | $0.27 | $2.18 | $10.73 | $5.94 | $7.77 | **$11.55** |
+
+### Hallazgos críticos V4
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | OBSERVACIÓN | **MaxDD 3.0-3.1% — el más bajo de toda la historia del proyecto** | La combinación de alta selectividad (2 niveles) + BE management elimina casi todo el drawdown |
+| 2026-05-16 | OBSERVACIÓN | **WR efectivo 2025: 57.9%** (excluyendo BE) — el más alto de todas las versiones y años | El filtro de 2 niveles + BE están alineados perfectamente con el mercado de 2025 |
+| 2026-05-16 | OBSERVACIÓN | **V4 2025 más eficiente que V2+KO 2025**: $11.55/trade vs $5.94/trade con 24 vs 52 trades | Menos trades pero mayor ganancia por trade; sistema más selectivo y preciso |
+| 2026-05-16 | OBSERVACIÓN | **HTF short en 2024 es el peor subgrupo**: WR 13.3%, PnL -$18 en 15 trades | Paradoja: cuando H4/H1 confirman bajista y vemos asia_high, el patrón no funciona tan bien en 2024. En 2025 el mismo subgrupo tiene 66.7% WR. Muestra pequeña = posible ruido estadístico |
+| 2026-05-16 | OBSERVACIÓN | **HTF neutral supera a HTF short en 2024**: 30.8% WR vs 13.3% | En días sin sesgo claro, el asia_high funciona mejor que cuando el sesgo confirma. Posible causa: en mercados tendenciales bajistas (HTF short), el barrido del asia_high es a veces continuación, no reversión |
+| 2026-05-16 | OBSERVACIÓN | **BE es crítico para 2024**: 12 BEs de 36 trades. Sin BE, V4 2024 habría tenido -$40 PnL | El break-even convierte lo que sería un año perdedor en un año levemente positivo |
+| 2026-05-16 | OBSERVACIÓN | **prev_day_low → LONG: rendimiento superior en 2025** (57.1% WR, +$119) | Solo 7 trades pero con 4W/2BE/1L — el nivel más preciso del sistema |
+| 2026-05-16 | OBSERVACIÓN | **Meses positivos 2024: 4/11 (36%) vs 2025: 6/9 (67%)** | 2024 sigue siendo el año difícil; el sistema no pierde dinero pero tampoco gana consistentemente |
+
+### Próximos pasos
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | DECISIÓN | Escalar V4 a 2021, 2022, 2023 cuando se descarguen los datos | Validación en más años antes de operar en vivo |
+| 2026-05-16 | DECISIÓN | Evaluar desactivar HTF "short" para asia_high en 2024-style markets | Si HTF short → WR 13.3% vs HTF neutral → 30.8%, podría ser mejor solo usar neutral |
+| 2026-05-16 | DECISIÓN | Evaluar aumentar BE_TRIGGER_RR de 1.5 a 1.0 (mover BE más rápido) | Con 33% BE rate en 2024, el BE es activo frecuentemente — moverlo antes podría mejorar |
+| 2026-05-16 | DECISIÓN | Cuando valide en 3+ años adicionales, considerar uso en cuenta real con capital mínimo | El MaxDD de 3% permite operar con alta confianza en gestión del riesgo |

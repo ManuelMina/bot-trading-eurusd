@@ -93,6 +93,35 @@ HTF_SWEEP_PIPS   = 2    # pips mínimos para confirmar barrido de swing en H4/H1
 # NY Federal holidays — el bot NO opera estos días
 # ---------------------------------------------------------------------------
 NY_HOLIDAYS: set[str] = {
+    # 2021
+    "2021-01-01",  # New Year's Day
+    "2021-01-18",  # MLK Day
+    "2021-02-15",  # Presidents Day
+    "2021-05-31",  # Memorial Day
+    "2021-06-19",  # Juneteenth (first year observed)
+    "2021-07-05",  # Independence Day (observed, July 4 = Sunday)
+    "2021-09-06",  # Labor Day
+    "2021-11-25",  # Thanksgiving
+    "2021-12-24",  # Christmas (observed, Dec 25 = Saturday)
+    # 2022
+    "2022-01-17",  # MLK Day (Jan 1 = Saturday, no extra day)
+    "2022-02-21",  # Presidents Day
+    "2022-05-30",  # Memorial Day
+    "2022-06-19",  # Juneteenth
+    "2022-07-04",  # Independence Day
+    "2022-09-05",  # Labor Day
+    "2022-11-24",  # Thanksgiving
+    "2022-12-26",  # Christmas (observed, Dec 25 = Sunday)
+    # 2023
+    "2023-01-02",  # New Year's Day (observed, Jan 1 = Sunday)
+    "2023-01-16",  # MLK Day
+    "2023-02-20",  # Presidents Day
+    "2023-05-29",  # Memorial Day
+    "2023-06-19",  # Juneteenth
+    "2023-07-04",  # Independence Day
+    "2023-09-04",  # Labor Day
+    "2023-11-23",  # Thanksgiving
+    "2023-12-25",  # Christmas
     # 2024
     "2024-01-01",  # New Year's Day
     "2024-01-15",  # MLK Day
@@ -113,4 +142,14 @@ NY_HOLIDAYS: set[str] = {
     "2025-09-01",  # Labor Day
     "2025-11-27",  # Thanksgiving
     "2025-12-25",  # Christmas
+    # 2026
+    "2026-01-01",  # New Year's Day
+    "2026-01-19",  # MLK Day
+    "2026-02-16",  # Presidents Day
+    "2026-05-25",  # Memorial Day
+    "2026-06-19",  # Juneteenth
+    "2026-07-03",  # Independence Day (observed, July 4 = Saturday)
+    "2026-09-07",  # Labor Day
+    "2026-11-26",  # Thanksgiving
+    "2026-12-25",  # Christmas
 }

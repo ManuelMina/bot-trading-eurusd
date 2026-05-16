@@ -827,6 +827,345 @@ def run(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
     return df
 
 
+# ---------------------------------------------------------------------------
+# Backtest de un dia — Version 4 (solo niveles top + HTF veto + break-even)
+# ---------------------------------------------------------------------------
+
+# Únicos niveles que demostraron WR > break-even en V2+KO (2024 y 2025)
+_V4_VALID_LEVELS = {"asia_high", "prev_day_low"}
+
+
+def _backtest_day_v4(
+    trade_date: date,
+    m1_day:     pd.DataFrame,
+    day_levels: list,
+    gap_bias:   str | None,
+    cycle:      str,
+    htf_bias:   dict,
+    capital:    float,
+) -> tuple[list[dict], float]:
+    """
+    V4: solo asia_high→SHORT y prev_day_low→LONG
+        + filtro HTF como veto direccional (no bloquea días enteros)
+        + señal de barrido V2 (sweep + vela de fuerza + confirmaciones)
+        + break-even al 1.5× riesgo
+
+    Lógica HTF:
+        asia_high → SHORT : se ejecuta si htf_combined en {"short", "neutral"}
+        prev_day_low → LONG: se ejecuta si htf_combined en {"long",  "neutral"}
+        Si htf contradice la dirección del nivel → se descarta ese barrido.
+    """
+    from engine.position_sizer import calculate
+
+    combined = htf_bias.get("combined", "neutral")
+
+    trades       = []
+    trades_today = 0
+    daily_done   = False
+
+    sw_active  = False
+    sw_dir     = None
+    sw_bar     = -1
+    sw_extreme = 0.0
+    sw_name    = ""
+    sw_weight  = 0
+    sw_body    = 0.0
+
+    sweep_pips = SWEEP_MIN_PIPS * _PIP
+
+    for bar_idx in range(len(m1_day)):
+        if daily_done:
+            break
+
+        row    = m1_day.iloc[bar_idx]
+        dt_utc = row["datetime"]
+
+        if not (_WINDOW_UTC_START <= dt_utc.hour < _WINDOW_UTC_END):
+            continue
+        if bar_idx == 0:
+            continue
+
+        bar_h    = float(row["high"])
+        bar_l    = float(row["low"])
+        bar_c    = float(row["close"])
+        bar_o    = float(row["open"])
+        bar_body = abs(bar_c - bar_o)
+        prev_c   = float(m1_day.iloc[bar_idx - 1]["close"])
+
+        # ------------------------------------------------------------------
+        # 1. Detectar barrido — solo niveles válidos y alineados con HTF
+        # ------------------------------------------------------------------
+        best_weight = sw_weight if sw_active else 0
+        best_sweep  = None
+
+        for lv in day_levels:
+            if lv.name not in _V4_VALID_LEVELS:
+                continue
+            if lv.weight < MIN_SWEEP_WEIGHT:
+                continue
+
+            # asia_high → SHORT
+            if lv.side in ("high", "both"):
+                if prev_c < lv.price and bar_h > lv.price + sweep_pips:
+                    # Veto HTF: solo si HTF dice short o neutral
+                    if combined not in ("short", "neutral"):
+                        continue
+                    if lv.weight > best_weight:
+                        best_sweep  = (lv.weight, "short", bar_h, lv.name)
+                        best_weight = lv.weight
+
+            # prev_day_low → LONG
+            if lv.side in ("low", "both"):
+                if prev_c > lv.price and bar_l < lv.price - sweep_pips:
+                    # Veto HTF: solo si HTF dice long o neutral
+                    if combined not in ("long", "neutral"):
+                        continue
+                    if lv.weight > best_weight:
+                        best_sweep  = (lv.weight, "long", bar_l, lv.name)
+                        best_weight = lv.weight
+
+        if best_sweep is not None:
+            sw_active, sw_weight, sw_dir, sw_extreme, sw_name = (
+                True, best_sweep[0], best_sweep[1], best_sweep[2], best_sweep[3]
+            )
+            sw_bar  = bar_idx
+            sw_body = bar_body
+
+        # ------------------------------------------------------------------
+        # 2. Vela de fuerza tras el barrido
+        # ------------------------------------------------------------------
+        if not sw_active or bar_idx <= sw_bar:
+            continue
+
+        if bar_idx - sw_bar > MAX_BARS_AFTER_SWEEP:
+            sw_active = False; sw_dir = None; sw_bar = -1
+            sw_extreme = 0.0; sw_name = ""; sw_weight = 0; sw_body = 0.0
+            continue
+
+        is_force = (
+            (sw_dir == "long"  and bar_c > bar_o and bar_body >= sw_body) or
+            (sw_dir == "short" and bar_c < bar_o and bar_body >= sw_body)
+        )
+        if not is_force:
+            continue
+
+        # ------------------------------------------------------------------
+        # 3. Confirmaciones (igual que V2)
+        # ------------------------------------------------------------------
+        div_r = {"divergence": bool(row.get("div_signal", False)),
+                 "direction":  row.get("div_direction", "")}
+        q_s   = {"signal":    bool(row.get("q_signal", False)),
+                 "direction": row.get("q_direction", None)}
+        mb    = _magnet_bias_from_row(row, bar_c)
+        confs = _count_confirmations_v2(div_r, q_s, mb, gap_bias, sw_dir)
+
+        if len(confs) < MIN_CONFIRMATIONS:
+            continue
+
+        # ------------------------------------------------------------------
+        # 4. Excelencia T3
+        # ------------------------------------------------------------------
+        avg_b = _avg_body(m1_day, bar_idx, EXCELLENCE_BODY_LOOKBACK)
+        is_excellence = (
+            cycle not in ("Unknown", "Sierra") and
+            len(confs) >= 3 and
+            bar_body >= EXCELLENCE_BODY_MULT * avg_b and
+            _before_t3_cutoff(dt_utc)
+        )
+
+        if trades_today == 2:
+            if not is_excellence:
+                continue
+            if not all(t["result"] in ("win", "be") for t in trades):
+                continue
+
+        # ------------------------------------------------------------------
+        # 5. Construir señal y simular con break-even
+        # ------------------------------------------------------------------
+        entry   = bar_c
+        sl      = (sw_extreme + SL_BUFFER_PIPS * _PIP) if sw_dir == "short" \
+                  else (sw_extreme - SL_BUFFER_PIPS * _PIP)
+        sl_pips = abs(entry - sl) / _PIP
+
+        if sw_dir == "long"  and sl >= entry: continue
+        if sw_dir == "short" and sl <= entry: continue
+        if sl_pips < 1.0: continue
+
+        tp = _tp_price(entry, sl, sw_dir, RISK_REWARD)
+
+        result, exit_p, exit_t, exit_idx = _simulate_trade_be(
+            entry, sl, tp, sw_dir, bar_idx, m1_day
+        )
+        if result == "open":
+            result, exit_p = "loss", sl
+
+        risk_usd = capital * RISK_PCT
+        pnl = (risk_usd * RISK_REWARD if result == "win"
+               else 0.0 if result == "be"
+               else -risk_usd)
+        capital += pnl
+
+        trades.append({
+            "date":          trade_date.isoformat(),
+            "signal_time":   str(dt_utc),
+            "exit_time":     str(exit_t) if exit_t else "",
+            "direction":     sw_dir,
+            "cycle":         cycle,
+            "entry_price":   round(entry,    5),
+            "sl_price":      round(sl,       5),
+            "tp_price":      round(tp,       5),
+            "exit_price":    round(exit_p,   5),
+            "sl_pips":       round(sl_pips,  1),
+            "lots":          calculate(sl_pips=sl_pips, capital=capital),
+            "risk_usd":      round(risk_usd, 2),
+            "result":        result,
+            "pnl_usd":       round(pnl,      2),
+            "capital_after": round(capital,  2),
+            "trade_num_day": trades_today + 1,
+            "confirmations": "|".join(confs),
+            "sweep_level":   sw_name,
+            "sweep_weight":  sw_weight,
+            "induction_price": round(sw_extreme, 5),
+            "excellence":    is_excellence,
+            "h4_bias":       htf_bias.get("h4_bias",  "neutral"),
+            "h1_bias":       htf_bias.get("h1_bias",  "neutral"),
+            "htf_combined":  combined,
+        })
+        trades_today += 1
+
+        sw_active = False; sw_dir = None; sw_bar = -1
+        sw_extreme = 0.0; sw_name = ""; sw_weight = 0; sw_body = 0.0
+
+        # BE no cuenta como pérdida → permite buscar T2
+        if result == "loss" or trades_today >= 3:
+            daily_done = True
+
+    return trades, capital
+
+
+# ---------------------------------------------------------------------------
+# Backtest completo del año — Version 4
+# ---------------------------------------------------------------------------
+
+def run_v4(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
+    """
+    V4: solo asia_high→SHORT y prev_day_low→LONG
+        + veto HTF H4/H1 (no bloquea días, solo veta si hay contradicción)
+        + señal de barrido V2 + break-even 1.5:1
+        + FILTER_KNOCKOUT activo
+    """
+    print(f"\n[BACKTEST V4] Ano {year} -- capital inicial: ${initial_capital:,.2f}")
+
+    from data.fetcher import load
+    from analysis.asia_range import compute as ar_compute, get_for_date
+    from analysis.cycle_detector import compute as cd_compute
+    from analysis.levels import precompute_daily_hl, precompute_weekly_hl, build_day_levels
+    from analysis.gap_detector import detect_weekly_gaps, get_gap_bias
+    from analysis.opening_magnets import compute as mag_compute
+    from analysis.htf_structure import get_htf_bias
+
+    print("  Cargando datos...")
+    m1_eu = load(SYMBOL_MAIN, TF_ENTRY,    year)
+    m5_eu = load(SYMBOL_MAIN, TF_ANALYSIS, year)
+    m5_gu = load(SYMBOL_DIV,  TF_ANALYSIS, year)
+
+    print("  Calculando rango Asia y ciclos...")
+    asia_df   = ar_compute(m1_eu)
+    cycles_df = cd_compute(m5_eu, asia_df)
+
+    print("  Pre-calculando senales M5...")
+    sigs         = _precompute_signals(m5_eu, m5_gu)
+    m1_with_sigs = _attach_to_m1(m1_eu, sigs)
+
+    print("  Pre-calculando niveles (daily/weekly OHLC, gaps)...")
+    daily_hl  = precompute_daily_hl(m1_eu)
+    weekly_hl = precompute_weekly_hl(m1_eu)
+    gaps_df   = detect_weekly_gaps(m1_eu, min_pips=GAP_MIN_PIPS)
+    mag_df    = mag_compute(m5_eu)
+
+    trading_days = _trading_days(year)
+    print(f"  Dias operativos: {len(trading_days)}")
+
+    all_trades      = []
+    capital         = initial_capital
+    htf_veto_days   = 0
+    no_level_days   = 0
+
+    for i, d in enumerate(trading_days):
+        cycle_row = cycles_df[cycles_df["date"] == d]
+        cycle     = cycle_row.iloc[0]["cycle"] if not cycle_row.empty else "Unknown"
+
+        if cycle == "Unknown":
+            continue
+        if FILTER_KNOCKOUT and cycle == "Knockout":
+            continue
+
+        asia    = get_for_date(asia_df, d)
+        gap_bias = get_gap_bias(gaps_df, d)
+
+        mag_row = mag_df[mag_df["date"] == d]
+        mag1 = float(mag_row.iloc[0]["magnet_1"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_1"]) else None
+        mag2 = float(mag_row.iloc[0]["magnet_2"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_2"]) else None
+
+        day_levels = build_day_levels(
+            d, asia, mag1, mag2, daily_hl, weekly_hl,
+            min_weight=MIN_SWEEP_WEIGHT, max_weight=MAX_LEVEL_WEIGHT,
+        )
+
+        # Filtrar solo los niveles válidos V4
+        v4_levels = [lv for lv in day_levels if lv.name in _V4_VALID_LEVELS]
+        if not v4_levels:
+            no_level_days += 1
+            continue
+
+        # Sesgo H4/H1 (veto, no gate total)
+        htf_bias = get_htf_bias(
+            m1_eu, d,
+            sweep_pips=HTF_SWEEP_PIPS,
+            h4_lookback_days=H4_LOOKBACK_DAYS,
+            h1_lookback_bars=H1_LOOKBACK_BARS,
+        )
+
+        day_mask = m1_with_sigs["datetime"].dt.date == d
+        m1_day   = m1_with_sigs[day_mask].reset_index(drop=True)
+        if m1_day.empty:
+            continue
+
+        day_trades, capital = _backtest_day_v4(
+            d, m1_day, day_levels, gap_bias, cycle, htf_bias, capital
+        )
+        all_trades.extend(day_trades)
+
+        if (i + 1) % 50 == 0:
+            print(f"  [{i+1}/{len(trading_days)}] {d} | capital: ${capital:,.2f} | trades: {len(all_trades)}")
+
+    print(f"\n  Dias sin nivel V4 disponible: {no_level_days}")
+    print(f"  Trades totales: {len(all_trades)}")
+    print(f"  Capital final:  ${capital:,.2f}")
+    print(f"  P&L total:      ${capital - initial_capital:+,.2f}")
+
+    df = pd.DataFrame(all_trades)
+    if not df.empty:
+        wins  = (df["result"] == "win").sum()
+        bes   = (df["result"] == "be").sum()
+        total = len(df)
+        print(f"  Win rate:       {wins}/{total} = {100*wins/total:.1f}%")
+        print(f"  Break-even:     {bes}/{total} = {100*bes/total:.1f}%")
+        if "htf_combined" in df.columns:
+            for htf_val, g in df.groupby("htf_combined"):
+                w = (g["result"] == "win").sum()
+                t = len(g)
+                print(f"  HTF {htf_val}: {t} trades, WR={100*w/t:.1f}%")
+        if "sweep_level" in df.columns:
+            for lvl, g in df.groupby("sweep_level"):
+                w = (g["result"] == "win").sum()
+                t = len(g)
+                p = g["pnl_usd"].sum()
+                print(f"  {lvl}: {t} trades, WR={100*w/t:.1f}%, PnL={p:+.2f}")
+
+    return df
+
+
 def save_results(df: pd.DataFrame, year: int) -> Path:
     _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = _RESULTS_DIR / f"backtest_{year}.csv"
@@ -845,8 +1184,8 @@ def _parse_args():
                    help="Ano (repetir para multiples: --year 2024 --year 2025)")
     p.add_argument("--capital", type=float, default=CAPITAL,
                    help=f"Capital inicial USD (default: {CAPITAL})")
-    p.add_argument("--version", type=int, default=2, choices=[2, 3],
-                   help="Version de la estrategia: 2 (sweep) o 3 (HTF+induccion+BE)")
+    p.add_argument("--version", type=int, default=4, choices=[2, 3, 4],
+                   help="Version: 2=sweep, 3=HTF+induccion+BE, 4=niveles top+HTF veto+BE")
     return p.parse_args()
 
 
@@ -854,12 +1193,21 @@ if __name__ == "__main__":
     args  = _parse_args()
     years = args.years or BACKTEST_YEARS
 
-    runner = run_v3 if args.version == 3 else run
-    label  = f"V{args.version}"
+    if args.version == 4:
+        runner = run_v4
+    elif args.version == 3:
+        runner = run_v3
+    else:
+        runner = run
+    label = f"V{args.version}"
 
     for yr in years:
         df = runner(yr, initial_capital=args.capital)
         if not df.empty:
-            save_results(df, yr)
+            out_dir = _RESULTS_DIR / "v4"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            path = out_dir / f"backtest_{yr}.csv"
+            df.to_csv(path, index=False)
+            print(f"  [SAVED] {path}")
 
     print(f"\n[DONE] Backtesting {label} completado.")

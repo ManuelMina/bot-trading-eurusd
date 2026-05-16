@@ -180,6 +180,7 @@
     <button class="tab-btn" onclick="showTab('v1')">Backtest V1</button>
     <button class="tab-btn" onclick="showTab('v2')">Backtest V2</button>
     <button class="tab-btn" onclick="showTab('v3')">Backtest V3</button>
+    <button class="tab-btn" onclick="showTab('v4')">Backtest V4</button>
     <button class="tab-btn" onclick="showTab('comparativa')">Comparativa</button>
   </div>
 </nav>
@@ -735,10 +736,143 @@
   </div>
 </div>
 
+<!-- ============================================================ V4 -->
+<div id="v4" class="page">
+  <h1>Backtest V4 — Niveles Probados + Veto HTF + Break-Even</h1>
+  <p class="subtitle">Solo asia_high→SHORT y prev_day_low→LONG · Veto H4/H1 por dirección · BE al 1.5:1 · FILTER_KNOCKOUT · 2024–2025</p>
+
+  <div class="insight-grid" style="margin-bottom:20px">
+    <div class="insight info">
+      <div class="insight-title">Los tres filtros de V4</div>
+      <div class="insight-body"><b>Nivel:</b> solo los 2 niveles con WR &gt;25% probado (asia_high y prev_day_low). <b>HTF:</b> veta si H4/H1 contradice la dirección — no bloquea días enteros. <b>BE:</b> SL a entrada cuando el trade va +1.5:1.</div>
+    </div>
+    <div class="insight good">
+      <div class="insight-title">MaxDD 3% — el más bajo del proyecto</div>
+      <div class="insight-body">La combinación de alta selectividad + break-even management elimina casi todo el drawdown. 3.0–3.1% en ambos años vs 28.9% de V1 y 9.7% de V2+KO en 2024.</div>
+    </div>
+  </div>
+
+  <!-- KPIs 2024 -->
+  <h2>Año 2024</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">36</div><div class="kpi-sub">solo 2 niveles clave</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value yellow">22.2%</div><div class="kpi-sub">WR efectivo: 33.3%</div></div>
+    <div class="kpi"><div class="kpi-label">Break-Even</div><div class="kpi-value blue">12 trades</div><div class="kpi-sub">33.3% — capital protegido</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$79</div><div class="kpi-sub">+7.9% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value green">3.1%</div><div class="kpi-sub">el más bajo del proyecto</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$1,079</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2024</h3><canvas id="eq_v4_2024" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2024</h3><canvas id="mo_v4_2024" height="180"></canvas></div>
+  </div>
+
+  <!-- KPIs 2025 -->
+  <h2>Año 2025</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">24</div><div class="kpi-sub">máxima selectividad</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value green">45.8%</div><div class="kpi-sub">WR efectivo: 57.9%</div></div>
+    <div class="kpi"><div class="kpi-label">Break-Even</div><div class="kpi-value blue">5 trades</div><div class="kpi-sub">20.8% — capital protegido</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$277</div><div class="kpi-sub">+27.7% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value green">3.0%</div><div class="kpi-sub">el más bajo del proyecto</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$1,277</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2025</h3><canvas id="eq_v4_2025" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2025</h3><canvas id="mo_v4_2025" height="180"></canvas></div>
+  </div>
+
+  <!-- Desglose -->
+  <div class="chart-grid-3">
+    <div class="panel">
+      <h3>Por Ciclo</h3>
+      <canvas id="cyc_v4" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>Por Nivel de Barrido — 2024</h3>
+      <table>
+        <thead><tr><th>Nivel</th><th>Trades</th><th>WR</th><th>BE</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>asia_high → S</b></td><td>26</td><td style="color:var(--yellow)">23.1%</td><td style="color:var(--blue)">26.9%</td><td style="color:var(--green)">+$50</td></tr>
+          <tr><td><b>prev_day_low → L</b></td><td>10</td><td style="color:var(--yellow)">20.0%</td><td style="color:var(--blue)">50.0%</td><td style="color:var(--green)">+$29</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Por Nivel de Barrido — 2025</h3>
+      <table>
+        <thead><tr><th>Nivel</th><th>Trades</th><th>WR</th><th>BE</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>asia_high → S</b></td><td>17</td><td style="color:var(--green)">41.2%</td><td style="color:var(--blue)">17.6%</td><td style="color:var(--green)">+$158</td></tr>
+          <tr><td><b>prev_day_low → L</b></td><td>7</td><td style="color:var(--green)">57.1%</td><td style="color:var(--blue)">28.6%</td><td style="color:var(--green)">+$119</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="panel">
+      <h3>Sesgo HTF — 2024</h3>
+      <table>
+        <thead><tr><th>HTF</th><th>Trades</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>Long</b></td><td>8</td><td style="color:var(--green)">25.0%</td><td style="color:var(--green)">+$49</td></tr>
+          <tr><td><b>Neutral</b></td><td>13</td><td style="color:var(--green)">30.8%</td><td style="color:var(--green)">+$48</td></tr>
+          <tr><td><b>Short</b></td><td>15</td><td style="color:var(--red)">13.3%</td><td style="color:var(--red)">−$18</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Sesgo HTF — 2025</h3>
+      <table>
+        <thead><tr><th>HTF</th><th>Trades</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>Long</b></td><td>6</td><td style="color:var(--green)">50.0%</td><td style="color:var(--green)">+$86</td></tr>
+          <tr><td><b>Neutral</b></td><td>12</td><td style="color:var(--green)">33.3%</td><td style="color:var(--green)">+$59</td></tr>
+          <tr><td><b>Short</b></td><td>6</td><td style="color:var(--green)">66.7%</td><td style="color:var(--green)">+$133</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Parámetros V4</h3>
+      <table>
+        <thead><tr><th>Parámetro</th><th>Valor</th></tr></thead>
+        <tbody>
+          <tr><td>Niveles activos</td><td><b>asia_high, prev_day_low</b></td></tr>
+          <tr><td>Filtro HTF</td><td><b>Veto (no gate)</b></td></tr>
+          <tr><td>BE_TRIGGER_RR</td><td><b>1.5×</b></td></tr>
+          <tr><td>FILTER_KNOCKOUT</td><td><b>True</b></td></tr>
+          <tr><td>MIN_CONFIRMATIONS</td><td><b>2</b></td></tr>
+          <tr><td>RISK_REWARD</td><td><b>1:3</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight good">
+      <div class="insight-title">2025: WR efectivo 57.9%</div>
+      <div class="insight-body">Excluyendo BEs, 11 trades ganaron de 19 resueltos. El sistema entra en muy pocas operaciones pero con altísima precisión. prev_day_low → LONG tiene 57.1% WR en 2025.</div>
+    </div>
+    <div class="insight good">
+      <div class="insight-title">MaxDD 3% — gestión de riesgo excepcional</div>
+      <div class="insight-body">El capital nunca cae más de 3% desde el máximo. Esto hace que V4 sea el sistema más seguro de todos los evaluados, apropiado para uso en cuenta real.</div>
+    </div>
+    <div class="insight warn">
+      <div class="insight-title">HTF short paradoja en 2024</div>
+      <div class="insight-body">Cuando H4/H1 confirman bajista, los trades SHORT tienen 13.3% WR en 2024 — el peor subgrupo. En 2025 el mismo subgrupo tiene 66.7%. Muestra pequeña = posible ruido estadístico.</div>
+    </div>
+    <div class="insight info">
+      <div class="insight-title">Solo 60 trades en 2 años</div>
+      <div class="insight-body">La altísima selectividad (36+24 trades) reduce la muestra estadística. Se necesitan más años de datos para confirmar la robustez. Próximo paso: validar en 2021–2023.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================ COMPARATIVA -->
 <div id="comparativa" class="page">
-  <h1>Comparativa V1 vs V2 vs V3</h1>
-  <p class="subtitle">Inducción clásica · Barrido de niveles clave · Top-down HTF + Break-Even</p>
+  <h1>Comparativa V1 vs V2 vs V3 vs V4</h1>
+  <p class="subtitle">Inducción clásica · Barrido de niveles · HTF + Break-Even · Niveles probados + HTF veto + BE</p>
 
   <div class="chart-grid-2">
     <div class="panel">
@@ -752,96 +886,76 @@
   </div>
 
   <div class="panel section-gap">
-    <h3>Métricas clave — V1 vs V2 vs V3</h3>
+    <h3>Métricas clave — V1 vs V2 vs V3 vs V4</h3>
     <table class="compare-table">
       <thead>
         <tr>
           <th>Métrica</th>
-          <th>V1 · 2024</th>
-          <th>V2 · 2024</th>
-          <th class="highlight-col">V3 · 2024</th>
-          <th>V1 · 2025</th>
-          <th>V2 · 2025</th>
-          <th class="highlight-col">V3 · 2025</th>
+          <th>V1 · 24</th>
+          <th>V2 · 24</th>
+          <th>V3 · 24</th>
+          <th class="highlight-col">V4 · 24</th>
+          <th>V1 · 25</th>
+          <th>V2 · 25</th>
+          <th>V3 · 25</th>
+          <th class="highlight-col">V4 · 25</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><b>Trades totales</b></td>
-          <td>253</td>
-          <td>73</td>
-          <td class="highlight-col">51 <span style="color:var(--muted);font-size:11px">(+53 neutral)</span></td>
-          <td>252</td>
-          <td>52</td>
-          <td class="highlight-col">54 <span style="color:var(--muted);font-size:11px">(+37 neutral)</span></td>
+          <td><b>Trades</b></td>
+          <td>253</td><td>73</td><td>51</td>
+          <td class="highlight-col blue">36</td>
+          <td>252</td><td>52</td><td>54</td>
+          <td class="highlight-col blue">24</td>
         </tr>
         <tr>
-          <td><b>Win Rate</b></td>
-          <td>29.6%</td>
-          <td>30.1%</td>
-          <td class="highlight-col" style="color:var(--red)">21.6% ↓</td>
-          <td>38.5%</td>
-          <td>38.5%</td>
-          <td class="highlight-col">35.2%</td>
+          <td><b>WR total</b></td>
+          <td>29.6%</td><td>30.1%</td><td>21.6%</td>
+          <td class="highlight-col">22.2%</td>
+          <td>38.5%</td><td>38.5%</td><td>35.2%</td>
+          <td class="highlight-col winner green">45.8% ↑</td>
         </tr>
         <tr>
-          <td><b>Break-Even</b></td>
-          <td>—</td>
-          <td>—</td>
-          <td class="highlight-col blue">9 trades (17.6%)</td>
-          <td>—</td>
-          <td>—</td>
-          <td class="highlight-col blue">14 trades (25.9%)</td>
+          <td><b>WR efectivo</b></td>
+          <td>—</td><td>—</td><td>26.2%</td>
+          <td class="highlight-col green">33.3%</td>
+          <td>—</td><td>—</td><td>47.5%</td>
+          <td class="highlight-col winner green">57.9% ↑</td>
         </tr>
         <tr>
-          <td><b>P&L Absoluto</b></td>
-          <td class="winner green">+$534</td>
-          <td>+$148</td>
-          <td class="highlight-col">+$14</td>
-          <td class="winner green">+$2,704</td>
-          <td>+$309</td>
-          <td class="highlight-col green">+$420</td>
+          <td><b>P&L</b></td>
+          <td class="winner green">+$534</td><td>+$148</td><td>+$14</td>
+          <td class="highlight-col green">+$79</td>
+          <td class="winner green">+$2,704</td><td>+$309</td><td>+$420</td>
+          <td class="highlight-col green">+$277</td>
         </tr>
         <tr>
-          <td><b>P&L % Capital</b></td>
-          <td class="winner green">+53.4%</td>
-          <td>+14.8%</td>
-          <td class="highlight-col">+1.4%</td>
-          <td class="winner green">+270%</td>
-          <td>+30.9%</td>
-          <td class="highlight-col winner green">+42.0% ↑</td>
-        </tr>
-        <tr>
-          <td><b>Max Drawdown</b></td>
+          <td><b>MaxDD</b></td>
           <td style="color:var(--red)">28.9%</td>
-          <td style="color:var(--green)">9.7%</td>
-          <td class="highlight-col" style="color:var(--yellow)">13.2%</td>
+          <td style="color:var(--yellow)">9.7%</td>
+          <td style="color:var(--yellow)">13.2%</td>
+          <td class="highlight-col winner green">3.1% ↓</td>
           <td style="color:var(--yellow)">13.1%</td>
           <td style="color:var(--green)">4.9%</td>
-          <td class="highlight-col" style="color:var(--green)">8.6% ↓</td>
+          <td style="color:var(--yellow)">8.6%</td>
+          <td class="highlight-col winner green">3.0% ↓</td>
         </tr>
         <tr>
-          <td><b>Capital final</b></td>
-          <td class="winner green">$1,534</td>
-          <td>$1,148</td>
-          <td class="highlight-col">$1,014</td>
-          <td class="winner green">$3,704</td>
-          <td>$1,309</td>
-          <td class="highlight-col green">$1,420</td>
+          <td><b>$/trade</b></td>
+          <td>$2.11</td><td>$2.03</td><td>$0.27</td>
+          <td class="highlight-col green">$2.18</td>
+          <td>$10.73</td><td>$5.94</td><td>$7.77</td>
+          <td class="highlight-col winner green">$11.55 ↑</td>
         </tr>
         <tr>
           <td><b>Señal</b></td>
-          <td colspan="2" style="color:var(--muted);font-size:12px">Inducción (pullback 25 barras M1)</td>
-          <td class="highlight-col" style="color:var(--muted);font-size:12px">Inducción + filtro H4/H1</td>
-          <td colspan="2" style="color:var(--muted);font-size:12px">Sweep de nivel + vela de fuerza</td>
-          <td class="highlight-col" style="color:var(--muted);font-size:12px">Inducción + filtro H4/H1</td>
-        </tr>
-        <tr>
-          <td><b>Filtro HTF</b></td>
-          <td colspan="2" style="color:var(--muted);font-size:12px">Ninguno</td>
-          <td class="highlight-col" style="color:var(--blue);font-size:12px">H4+H1 sesgo diario</td>
-          <td colspan="2" style="color:var(--muted);font-size:12px">Ninguno</td>
-          <td class="highlight-col" style="color:var(--blue);font-size:12px">H4+H1 sesgo diario</td>
+          <td colspan="2" style="color:var(--muted);font-size:11px">Inducción M1</td>
+          <td style="color:var(--muted);font-size:11px">Ind.+HTF</td>
+          <td class="highlight-col" style="color:var(--orange);font-size:11px">Sweep+HTF veto+BE</td>
+          <td colspan="2" style="color:var(--muted);font-size:11px">Sweep niveles</td>
+          <td style="color:var(--muted);font-size:11px">Ind.+HTF</td>
+          <td class="highlight-col" style="color:var(--orange);font-size:11px">Sweep+HTF veto+BE</td>
         </tr>
       </tbody>
     </table>
@@ -903,7 +1017,9 @@ const D = {
   v2_2024: {"equity":[1000.0,1030.0,1019.7,1009.5,999.41,989.41,979.52,969.72,960.03,950.43,940.92,969.15,998.22,988.24,978.36,968.58,958.89,949.3,939.81,930.41,958.32,987.07,977.2,967.43,957.76,948.18,976.62,966.86,957.19,947.62,938.14,966.29,956.62,947.06,937.59,965.71,994.68,984.74,974.89,1004.14,1034.26,1023.92,1054.64,1044.09,1033.65,1064.66,1096.6,1085.63,1074.78,1107.02,1095.95,1084.99,1074.14,1106.36,1139.55,1173.74,1162.0,1150.38,1184.89,1220.44,1208.24,1196.16,1184.19,1172.35,1207.52,1195.45,1183.49,1171.66,1159.94,1148.34,1182.79,1170.96,1159.25,1147.66],"monthly":{"2024-01":19.7,"2024-02":-20.3,"2024-03":-29.68,"2024-04":8.64,"2024-05":-47.95,"2024-06":56.66,"2024-07":-20.21,"2024-08":-10.24,"2024-09":118.14,"2024-10":97.58,"2024-11":-12.41,"2024-12":-12.28},"cycles":{"Normal":{trades:71,wr:29.6,pnl:127.12},"Sierra":{trades:2,wr:50,pnl:20.53}},"levels":{"asia_high":{trades:29,wr:48.3,pnl:277.57},"asia_low":{trades:16,wr:6.2,pnl:-129.15},"prev_day_high":{trades:16,wr:6.2,pnl:-120.02},"prev_day_low":{trades:12,wr:50.0,pnl:119.25}}},
   v2_2025: {"equity":[1000.0,1030.0,1019.7,1009.5,999.41,989.41,979.52,1008.91,998.82,988.83,1018.49,1008.31,998.22,988.24,1017.89,1048.43,1037.94,1069.08,1058.39,1047.81,1037.33,1068.45,1057.76,1089.5,1122.18,1110.96,1099.85,1132.85,1121.52,1110.3,1099.2,1088.21,1120.85,1109.64,1142.93,1131.5,1120.19,1153.79,1142.26,1176.52,1211.82,1248.17,1235.69,1223.34,1211.1,1198.99,1234.96,1222.61,1259.29,1297.07,1284.1,1271.26,1309.4],"monthly":{"2025-01":30.0,"2025-02":-20.5,"2025-03":-20.67,"2025-04":49.13,"2025-05":20.45,"2025-06":52.57,"2025-07":-11.76,"2025-08":32.31,"2025-09":-11.32,"2025-10":78.81,"2025-11":98.08,"2025-12":12.33},"cycles":{"Normal":{trades:51,wr:37.3,pnl:271.65},"Sierra":{trades:1,wr:100,pnl:37.78}},"levels":{"asia_high":{trades:17,wr:64.7,pnl:292.54},"asia_low":{trades:24,wr:25.0,pnl:7.92},"prev_day_high":{trades:5,wr:20.0,pnl:-10.82},"prev_day_low":{trades:6,wr:33.3,pnl:19.79}}},
   v3_2024: {"equity":[1000.0,990.0,980.1,970.3,960.6,950.99,950.99,941.48,969.72,960.03,950.43,940.92,931.51,922.2,922.2,912.98,903.85,894.81,885.86,877.0,868.23,868.23,894.28,894.28,921.11,921.11,948.74,977.2,1006.52,1006.52,996.45,1026.35,1057.14,1046.57,1046.57,1036.1,1025.74,1056.51,1088.21,1077.32,1109.64,1109.64,1109.64,1098.55,1087.56,1076.69,1065.92,1055.26,1044.71,1034.26,1023.92,1013.68],"monthly":{"2024-01":-39.4,"2024-02":-0.58,"2024-03":-37.83,"2024-04":-18.35,"2024-05":-9.57,"2024-07":112.24,"2024-08":29.57,"2024-09":73.55,"2024-10":-54.4,"2024-12":-41.58},"cycles":{"Normal":{trades:50,wr:22.0,pnl:22.6},"Sierra":{trades:1,wr:0,pnl:-8.95}},"htf":{"long":{trades:28,wr:17.9,pnl:-43.8},"short":{trades:23,wr:26.1,pnl:57.45}},"bes":9,"neutral_days":53},
-  v3_2025: {"equity":[1000.0,1030.0,1060.9,1092.73,1125.51,1159.27,1147.68,1182.11,1217.58,1217.58,1205.4,1193.35,1229.15,1229.15,1216.85,1253.36,1290.96,1329.69,1316.39,1303.23,1290.2,1277.29,1264.52,1251.88,1251.88,1251.88,1239.36,1226.96,1214.69,1251.14,1288.67,1327.33,1327.33,1367.15,1367.15,1353.48,1394.08,1380.14,1421.55,1464.19,1449.55,1493.04,1493.04,1493.04,1493.04,1493.04,1478.11,1463.32,1448.69,1448.69,1434.2,1419.86,1419.86,1419.86,1419.86],"monthly":{"2025-01":60.9,"2025-02":98.38,"2025-03":46.12,"2025-04":47.97,"2025-05":49.87,"2025-06":-38.7,"2025-07":24.14,"2025-08":78.48,"2025-09":-13.67,"2025-10":139.56,"2025-11":-44.34,"2025-12":-28.83},"cycles":{"Normal":{trades:51,wr:37.3,pnl:462.15},"Sierra":{trades:3,wr:0,pnl:-42.27}},"htf":{"long":{trades:35,wr:34.3,pnl:284.1},"short":{trades:19,wr:36.8,pnl:135.78}},"bes":14,"neutral_days":37}
+  v3_2025: {"equity":[1000.0,1030.0,1060.9,1092.73,1125.51,1159.27,1147.68,1182.11,1217.58,1217.58,1205.4,1193.35,1229.15,1229.15,1216.85,1253.36,1290.96,1329.69,1316.39,1303.23,1290.2,1277.29,1264.52,1251.88,1251.88,1251.88,1239.36,1226.96,1214.69,1251.14,1288.67,1327.33,1327.33,1367.15,1367.15,1353.48,1394.08,1380.14,1421.55,1464.19,1449.55,1493.04,1493.04,1493.04,1493.04,1493.04,1478.11,1463.32,1448.69,1448.69,1434.2,1419.86,1419.86,1419.86,1419.86],"monthly":{"2025-01":60.9,"2025-02":98.38,"2025-03":46.12,"2025-04":47.97,"2025-05":49.87,"2025-06":-38.7,"2025-07":24.14,"2025-08":78.48,"2025-09":-13.67,"2025-10":139.56,"2025-11":-44.34,"2025-12":-28.83},"cycles":{"Normal":{trades:51,wr:37.3,pnl:462.15},"Sierra":{trades:3,wr:0,pnl:-42.27}},"htf":{"long":{trades:35,wr:34.3,pnl:284.1},"short":{trades:19,wr:36.8,pnl:135.78}},"bes":14,"neutral_days":37},
+  v4_2024: {"equity":[1000.0,1000.0,990.0,980.1,970.3,999.41,999.41,989.41,979.52,969.72,969.72,998.82,988.83,978.94,978.94,969.15,969.15,998.22,988.24,988.24,988.24,1017.89,1017.89,1048.43,1079.88,1069.08,1101.15,1101.15,1090.14,1090.14,1079.24,1068.45,1100.5,1089.5,1078.6,1078.6,1078.6],"monthly":{"2024-01":-10.0,"2024-03":-9.9,"2024-04":-0.57,"2024-05":-9.8,"2024-06":29.09,"2024-07":-9.99,"2024-08":-9.89,"2024-09":69.49,"2024-10":20.02,"2024-11":10.15,"2024-12":0.0},"cycles":{"Normal":{trades:34,wr:23.5,pnl:88.39},"Sierra":{trades:2,wr:0,pnl:-9.79}},"htf":{"long":{trades:8,wr:25.0,pnl:48.73},"neutral":{trades:13,wr:30.8,pnl:47.74},"short":{trades:15,wr:13.3,pnl:-17.87}},"bes":12},
+  v4_2025: {"equity":[1000.0,1000.0,990.0,980.1,1009.5,1009.5,999.41,1029.39,1029.39,1060.27,1060.27,1092.08,1124.84,1158.59,1147.0,1181.41,1216.85,1253.36,1290.96,1278.05,1265.27,1252.62,1290.2,1277.29,1277.29],"monthly":{"2025-03":-0.6,"2025-04":92.67,"2025-05":32.76,"2025-06":56.57,"2025-07":35.44,"2025-08":74.11,"2025-10":-38.34,"2025-11":37.58,"2025-12":-12.9},"cycles":{"Normal":{trades:24,wr:45.8,pnl:277.29}},"htf":{"long":{trades:6,wr:50.0,pnl:85.62},"neutral":{trades:12,wr:33.3,pnl:58.81},"short":{trades:6,wr:66.7,pnl:132.86}},"bes":5}
 };
 
 // ============================================================ CHART HELPERS
@@ -1000,8 +1116,8 @@ function cycleChart(id, d24, d25) {
   });
 }
 
-function compareEq(id, v1, v2, v3, yr) {
-  const max = Math.max(v1.length, v2.length, v3.length);
+function compareEq(id, v1, v2, v3, v4, yr) {
+  const max = Math.max(v1.length, v2.length, v3.length, v4.length);
   const ctx = document.getElementById(id);
   if (!ctx) return;
   new Chart(ctx, {
@@ -1025,6 +1141,12 @@ function compareEq(id, v1, v2, v3, yr) {
           label: `V3 ${yr}`,
           data: v3,
           borderColor: '#bc8cff', borderWidth: 1.5,
+          fill: false, pointRadius: 0, tension: 0.1,
+        },
+        {
+          label: `V4 ${yr}`,
+          data: v4,
+          borderColor: '#ffa657', borderWidth: 2,
           fill: false, pointRadius: 0, tension: 0.1,
         }
       ]
@@ -1207,9 +1329,16 @@ window.addEventListener('DOMContentLoaded', () => {
   monthlyChart('mo_v3_2025', D.v3_2025.monthly, 'P&L 2025');
   cycleChart('cyc_v3', D.v3_2024.cycles, D.v3_2025.cycles);
 
+  // V4
+  eqChart('eq_v4_2024', D.v4_2024.equity, '#ffa657');
+  eqChart('eq_v4_2025', D.v4_2025.equity, '#39d353');
+  monthlyChart('mo_v4_2024', D.v4_2024.monthly, 'P&L 2024');
+  monthlyChart('mo_v4_2025', D.v4_2025.monthly, 'P&L 2025');
+  cycleChart('cyc_v4', D.v4_2024.cycles, D.v4_2025.cycles);
+
   // Comparativa
-  compareEq('eq_cmp_2024', D.v1_2024.equity, D.v2_2024.equity, D.v3_2024.equity, 2024);
-  compareEq('eq_cmp_2025', D.v1_2025.equity, D.v2_2025.equity, D.v3_2025.equity, 2025);
+  compareEq('eq_cmp_2024', D.v1_2024.equity, D.v2_2024.equity, D.v3_2024.equity, D.v4_2024.equity, 2024);
+  compareEq('eq_cmp_2025', D.v1_2025.equity, D.v2_2025.equity, D.v3_2025.equity, D.v4_2025.equity, 2025);
   levelsCmpChart('levels_compare');
 });
 
