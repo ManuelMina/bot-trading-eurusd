@@ -199,3 +199,80 @@ Formato: `[FECHA] | [TIPO] | [DESCRIPCIÓN] | [RAZÓN / CONTEXTO]`
 |---|---|---|---|
 | 2026-05-16 | DECISIÓN | Próximo experimento: filtrar `asia_low` y `prev_day_high` (solo operar `asia_high` y `prev_day_low`) | asia_low y prev_day_high tienen WR bajo o negativo en ambos años. Estimado: 2024 ~+$397 (41 trades, ~49% WR), 2025 ~+$312 (23 trades, ~57% WR) |
 | 2026-05-16 | DECISIÓN | Alternativa más conservadora: mantener asia_low pero solo si MIN_CONFIRMATIONS=3 para esos setups | Reducir tamaño de muestra muy pequeño si filtramos completamente asia_low+prev_day_high en 2025 |
+
+---
+
+## 2026-05-16 — Versión 3: Análisis top-down H4→H1 + Break-Even management (V3)
+
+### Concepto
+
+La estrategia V3 combina el sistema de entrada de V1 (inducción + vela de fuerza + ≥2 confirmaciones) con un filtro direccional multi-timeframe y gestión de break-even. El motor analiza H4 → H1 antes de la apertura de la sesión para determinar el sesgo del día, y solo opera trades que coincidan con ese sesgo. Cuando el trade alcanza 1.5:1 de beneficio, el SL se mueve al precio de entrada (break-even).
+
+### Lógica H4/H1
+
+| Timeframe | Uso | Lookback |
+|---|---|---|
+| H4 | Macro-estructura: swing highs/lows, barrido de pivot | 5 días hacia atrás |
+| H1 | Confirmación intermedia: estructura más cercana al precio | Últimas 24 horas |
+
+- **Sesgo "long"**: barrido de swing low (precio cruzó bajo el mínimo + cerró arriba) O estructura HH+HL en las últimas barras
+- **Sesgo "short"**: barrido de swing high (precio cruzó sobre el máximo + cerró abajo) O estructura LH+LL en las últimas barras
+- **Combinación**: H4 es primario; si H1 confirma o es neutral → sesgo de H4. Si H4 y H1 conflictan → "neutral" → no operar
+
+### Break-Even
+
+- **Trigger**: cuando el trade va +1.5× el riesgo en ganancia, el SL se mueve al precio de entrada
+- **Resultado "be"** (break-even): PnL = 0, no cuenta como pérdida, permite buscar T2
+
+### Nuevos archivos
+
+| Archivo | Descripción |
+|---|---|
+| `analysis/htf_structure.py` | Resampleo OHLC M1→H4/H1, detección de pivots, cálculo de sesgo H4/H1/combinado |
+
+### Nuevos parámetros en config.py
+
+| Parámetro | Valor | Descripción |
+|---|---|---|
+| `BE_TRIGGER_RR` | 1.5 | Mover SL a entrada cuando el trade gana 1.5× el riesgo |
+| `H4_LOOKBACK_DAYS` | 5 | Días de historia hacia atrás para construir H4 |
+| `H1_LOOKBACK_BARS` | 24 | Barras H1 a analizar (24 = últimas 24 horas) |
+| `HTF_SWEEP_PIPS` | 2 | Pips mínimos para confirmar barrido de swing en H4/H1 |
+
+### Resultados V3
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | RESULTADO | V3 2024: 51 trades / WR 21.6% / BE 17.6% / P&L +$13.65 (+1.4%) / 53 días HTF neutral | Capital $1,000 / filtro H4+H1 activo / BE_TRIGGER_RR=1.5 |
+| 2026-05-16 | RESULTADO | V3 2025: 54 trades / WR 35.2% / BE 25.9% / P&L +$419.88 (+42.0%) / 37 días HTF neutral | Capital $1,000 / filtro H4+H1 activo / BE_TRIGGER_RR=1.5 |
+
+### Comparativa V1 vs V2+KO vs V3
+
+| Métrica | V1 2024 | V2+KO 2024 | V3 2024 | V1 2025 | V2+KO 2025 | V3 2025 |
+|---|---|---|---|---|---|---|
+| Trades | 253 | 73 | 51 | 252 | 52 | 54 |
+| WR | 29.6% | 30.1% | 21.6% | 38.5% | 38.5% | 35.2% |
+| BE | 0 | 0 | 9 (17.6%) | 0 | 0 | 14 (25.9%) |
+| P&L | +$534 | +$148 | +$14 | +$2,704 | +$309 | +$420 |
+| P&L% | +53.4% | +14.8% | +1.4% | +270% | +30.9% | +42.0% |
+
+### Hallazgos V3
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | OBSERVACIÓN | **El filtro HTF mejora la calidad en 2025 pero no en 2024**: WR efectivo (excl. BE) 2024=26.2%, 2025=47.5% | El mercado en 2024 fue más errático (HTF structure signals less reliable in ranging year) |
+| 2026-05-16 | OBSERVACIÓN | **Break-even fue crítico**: 9 BEs en 2024 y 14 en 2025 → capital protegido en 41 trades que habrían sido pérdidas o ganancias parciales | Sin BE, muchos trades ganadores habrían cerrado en pérdida por reversión |
+| 2026-05-16 | OBSERVACIÓN | **Sierra sigue siendo 0% WR**: 1 trade en 2024, 3 en 2025, todos pérdidas | La lógica Sierra de la estrategia V1 no está produciendo resultados; pendiente revisión profunda |
+| 2026-05-16 | OBSERVACIÓN | **HTF short > long en 2024**: SHORT WR=26.1% (+$57), LONG WR=17.9% (-$44) | El sesgo bajista H4/H1 fue más confiable en 2024; posiblemente el año fue más tendencial a la baja |
+| 2026-05-16 | OBSERVACIÓN | **V3 2025 tiene la mayor eficiencia por trade**: +$7.77/trade vs V1 +$10.73 y V2+KO +$5.95 | V3 reduce el número de trades (más selectivo) pero mantiene una tasa de ganancia similar a V1 |
+| 2026-05-16 | OBSERVACIÓN | **2024 sigue siendo el año débil**: todas las versiones tienen menor WR y P&L en 2024 vs 2025 | El mercado de 2024 (primeros meses) fue tendencial y los setups de reversión tuvieron WR bajo |
+| 2026-05-16 | OBSERVACIÓN | **Mejor mes V3 2025**: octubre +$139.56 / **Peor mes**: junio -$38.70 | Consistencia razonablemente buena: 7 de 12 meses son positivos en 2025 |
+
+### Próximos pasos sugeridos
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | DECISIÓN | Evaluar combinar V3 (filtro HTF) con V2+KO (barrido de niveles clave) como entrada | El filtro H4/H1 daría contexto direccional; V2 daría el nivel exacto de entrada |
+| 2026-05-16 | DECISIÓN | Evaluar aumentar H4_LOOKBACK_DAYS de 5 a 7-10 para estructuras más claras | 5 días puede ser insuficiente para detectar swings significativos en mercados lentos |
+| 2026-05-16 | DECISIÓN | Evaluar deshabilitar FILTER_KNOCKOUT junto con V3 (V3 ya filtra por sesgo) | El HTF filter puede ya excluir los días Knockout implícitamente si el mercado Knockout tiende a ser más neutral |
+| 2026-05-16 | DECISIÓN | Analizar los 53 días HTF neutral de 2024: ¿qué pasó esos días? ¿habrían sido trades rentables? | Verificar si el filtro está eliminando buenos setups o si realmente el sesgo no era claro |

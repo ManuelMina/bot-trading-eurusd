@@ -82,6 +82,14 @@ MIN_CONFIRMATIONS        = 2    # confirmaciones mínimas para entrada (de 3)
 FILTER_KNOCKOUT          = True # excluir dias de ciclo Knockout (WR < break-even en 2024 y 2025)
 
 # ---------------------------------------------------------------------------
+# V3: Multi-timeframe top-down + Break-Even management
+# ---------------------------------------------------------------------------
+BE_TRIGGER_RR    = 1.5  # mover SL a entrada cuando el trade gana 1.5× el riesgo
+H4_LOOKBACK_DAYS = 5    # días de historia hacia atrás para construir H4
+H1_LOOKBACK_BARS = 24   # barras H1 a analizar (24 = últimas 24 horas)
+HTF_SWEEP_PIPS   = 2    # pips mínimos para confirmar barrido de swing en H4/H1
+
+# ---------------------------------------------------------------------------
 # NY Federal holidays — el bot NO opera estos días
 # ---------------------------------------------------------------------------
 NY_HOLIDAYS: set[str] = {

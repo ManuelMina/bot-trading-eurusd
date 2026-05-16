@@ -31,11 +31,15 @@ import pandas as pd
 
 from config import (
     BACKTEST_YEARS,
+    BE_TRIGGER_RR,
     CAPITAL,
     EXCELLENCE_BODY_LOOKBACK,
     EXCELLENCE_BODY_MULT,
     FILTER_KNOCKOUT,
     GAP_MIN_PIPS,
+    H1_LOOKBACK_BARS,
+    H4_LOOKBACK_DAYS,
+    HTF_SWEEP_PIPS,
     MAX_BARS_AFTER_SWEEP,
     MAX_LEVEL_WEIGHT,
     MIN_CONFIRMATIONS,
@@ -439,8 +443,302 @@ def _backtest_day_v2(
 
 
 # ---------------------------------------------------------------------------
+# Simulacion con Break-Even management (V3)
+# ---------------------------------------------------------------------------
+
+def _simulate_trade_be(
+    entry_price:   float,
+    sl_price:      float,
+    tp_price:      float,
+    direction:     str,
+    entry_bar_idx: int,
+    m1_bars:       pd.DataFrame,
+    be_rr:         float = BE_TRIGGER_RR,
+) -> tuple[str, float, pd.Timestamp | None, int]:
+    """
+    Simula un trade con gestion de Break-Even.
+
+    Cuando el precio alcanza be_rr x riesgo en positivo, el SL se mueve
+    al precio de entrada (break-even). A partir de ese momento el trade
+    solo puede terminar en win (TP) o be (SL en entrada = 0 P&L).
+
+    Retorna (result, exit_price, exit_time, exit_bar_idx).
+    result: "win" | "loss" | "be" | "open"
+    """
+    risk      = abs(entry_price - sl_price)
+    be_target = (entry_price + be_rr * risk) if direction == "long" \
+                else (entry_price - be_rr * risk)
+
+    current_sl   = sl_price
+    be_activated = False
+
+    highs = m1_bars["high"].values
+    lows  = m1_bars["low"].values
+    times = m1_bars["datetime"].values
+
+    for i in range(entry_bar_idx + 1, len(m1_bars)):
+        h, l = float(highs[i]), float(lows[i])
+
+        if direction == "long":
+            if not be_activated and h >= be_target:
+                current_sl   = entry_price
+                be_activated = True
+            if l <= current_sl:
+                return ("be" if be_activated else "loss"), current_sl, times[i], i
+            if h >= tp_price:
+                return "win", tp_price, times[i], i
+        else:
+            if not be_activated and l <= be_target:
+                current_sl   = entry_price
+                be_activated = True
+            if h >= current_sl:
+                return ("be" if be_activated else "loss"), current_sl, times[i], i
+            if l <= tp_price:
+                return "win", tp_price, times[i], i
+
+    last = len(m1_bars) - 1
+    return "open", entry_price, None, last
+
+
+# ---------------------------------------------------------------------------
+# Backtest de un dia — Version 3 (top-down HTF + induccion V1 + break-even)
+# ---------------------------------------------------------------------------
+
+def _backtest_day_v3(
+    trade_date: date,
+    m1_day:     pd.DataFrame,
+    htf_bias:   dict,
+    cycle:      str,
+    capital:    float,
+) -> tuple[list[dict], float]:
+    """
+    V3: filtro top-down H4/H1 + señal de induccion (logica V1) + break-even.
+
+    Flujo:
+        1. Si combined bias != "neutral", solo entrar en esa direccion.
+           Si combined == "neutral", no operar ese dia.
+        2. Señal: vela de fuerza + >= MIN_CONFIRMATIONS + induccion M1 (25 barras).
+        3. Trade: simular con break-even a 1.5× riesgo.
+        4. "be" no se cuenta como loss: permite buscar T2.
+    """
+    from analysis.induction_detector import find_induction
+    from engine.entry_logic import _count_confirmations
+    from engine.position_sizer import calculate
+
+    combined_bias = htf_bias.get("combined", "neutral")
+
+    # Si no hay sesgo claro en H4/H1, no operar
+    if combined_bias == "neutral":
+        return [], capital
+
+    trades       = []
+    trades_today = 0
+    daily_done   = False
+
+    for bar_idx in range(len(m1_day)):
+        if daily_done:
+            break
+
+        row    = m1_day.iloc[bar_idx]
+        dt_utc = row["datetime"]
+
+        if not (_WINDOW_UTC_START <= dt_utc.hour < _WINDOW_UTC_END):
+            continue
+        if bar_idx < EXCELLENCE_BODY_LOOKBACK + 2:
+            continue
+
+        bar_c = float(row["close"]); bar_o = float(row["open"])
+        bar_body = abs(bar_c - bar_o)
+
+        if bar_idx == 0:
+            continue
+        prev = m1_day.iloc[bar_idx - 1]
+        prev_body = abs(float(prev["close"]) - float(prev["open"]))
+
+        if bar_body <= prev_body:
+            continue
+
+        direction = "long" if bar_c > bar_o else ("short" if bar_c < bar_o else None)
+        if direction is None:
+            continue
+
+        # Filtro HTF: solo entrar en la direccion del sesgo H4/H1
+        if direction != combined_bias:
+            continue
+
+        # Confirmaciones (misma logica V1)
+        div_r = {"divergence": bool(row.get("div_signal", False)),
+                 "direction":  row.get("div_direction", "")}
+        q_s   = {"signal":    bool(row.get("q_signal", False)),
+                 "direction": row.get("q_direction", None)}
+        mb    = _magnet_bias_from_row(row, bar_c)
+        confs = _count_confirmations(div_r, q_s, mb, direction)
+
+        if len(confs) < MIN_CONFIRMATIONS:
+            continue
+
+        # Induccion en ventana M1 de 25 barras
+        window    = m1_day.iloc[max(0, bar_idx - 25): bar_idx + 1]
+        induction = find_induction(window, direction)
+        if induction is None:
+            continue
+
+        entry   = bar_c
+        sl      = induction["sl_price"]
+        sl_pips = abs(entry - sl) / _PIP
+
+        if sl_pips < 1.0:
+            continue
+        if direction == "long"  and sl >= entry:
+            continue
+        if direction == "short" and sl <= entry:
+            continue
+
+        tp = _tp_price(entry, sl, direction, RISK_REWARD)
+
+        # Excelencia T3
+        avg_b = _avg_body(m1_day, bar_idx, EXCELLENCE_BODY_LOOKBACK)
+        is_excellence = (
+            cycle not in ("Unknown", "Sierra") and
+            len(confs) >= 3 and
+            bar_body >= EXCELLENCE_BODY_MULT * avg_b and
+            _before_t3_cutoff(dt_utc)
+        )
+
+        if trades_today == 2:
+            if not is_excellence:
+                continue
+            if not all(t["result"] in ("win", "be") for t in trades):
+                continue
+
+        # Simular con break-even
+        result, exit_p, exit_t, exit_idx = _simulate_trade_be(
+            entry, sl, tp, direction, bar_idx, m1_day
+        )
+        if result == "open":
+            result, exit_p = "loss", sl
+
+        risk_usd = capital * RISK_PCT
+        pnl = (risk_usd * RISK_REWARD if result == "win"
+               else 0.0 if result == "be"
+               else -risk_usd)
+        capital += pnl
+
+        trades.append({
+            "date":            trade_date.isoformat(),
+            "signal_time":     str(dt_utc),
+            "exit_time":       str(exit_t) if exit_t else "",
+            "direction":       direction,
+            "cycle":           cycle,
+            "entry_price":     round(entry,  5),
+            "sl_price":        round(sl,     5),
+            "tp_price":        round(tp,     5),
+            "exit_price":      round(exit_p, 5),
+            "sl_pips":         round(sl_pips, 1),
+            "lots":            calculate(sl_pips=sl_pips, capital=capital),
+            "risk_usd":        round(risk_usd, 2),
+            "result":          result,
+            "pnl_usd":         round(pnl, 2),
+            "capital_after":   round(capital, 2),
+            "trade_num_day":   trades_today + 1,
+            "confirmations":   "|".join(confs),
+            "induction_price": round(induction["induction_price"], 5),
+            "excellence":      is_excellence,
+            "h4_bias":         htf_bias.get("h4_bias", "neutral"),
+            "h1_bias":         htf_bias.get("h1_bias", "neutral"),
+            "htf_combined":    combined_bias,
+        })
+        trades_today += 1
+
+        # BE no es loss → permite buscar T2
+        if result == "loss" or trades_today >= 3:
+            daily_done = True
+
+    return trades, capital
+
+
+# ---------------------------------------------------------------------------
 # Backtest completo del ano
 # ---------------------------------------------------------------------------
+
+def run_v3(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
+    """Ejecuta el backtest V3 (HTF top-down + induccion V1 + break-even)."""
+    print(f"\n[BACKTEST V3] Ano {year} -- capital inicial: ${initial_capital:,.2f}")
+
+    from data.fetcher import load
+    from analysis.asia_range import compute as ar_compute, get_for_date
+    from analysis.cycle_detector import compute as cd_compute
+    from analysis.htf_structure import get_htf_bias
+    from analysis.opening_magnets import compute as mag_compute
+
+    print("  Cargando datos...")
+    m1_eu = load(SYMBOL_MAIN, TF_ENTRY,    year)
+    m5_eu = load(SYMBOL_MAIN, TF_ANALYSIS, year)
+    m5_gu = load(SYMBOL_DIV,  TF_ANALYSIS, year)
+
+    print("  Calculando rango Asia y ciclos...")
+    asia_df   = ar_compute(m1_eu)
+    cycles_df = cd_compute(m5_eu, asia_df)
+
+    print("  Pre-calculando senales M5...")
+    sigs         = _precompute_signals(m5_eu, m5_gu)
+    m1_with_sigs = _attach_to_m1(m1_eu, sigs)
+
+    trading_days = _trading_days(year)
+    print(f"  Dias operativos: {len(trading_days)}")
+
+    all_trades = []
+    capital    = initial_capital
+    htf_neutral_days = 0
+
+    for i, d in enumerate(trading_days):
+        cycle_row = cycles_df[cycles_df["date"] == d]
+        cycle     = cycle_row.iloc[0]["cycle"] if not cycle_row.empty else "Unknown"
+
+        if cycle == "Unknown":
+            continue
+        if FILTER_KNOCKOUT and cycle == "Knockout":
+            continue
+
+        asia = get_for_date(asia_df, d)
+
+        # Sesgo H4/H1 del dia (solo barras previas a 12:00 UTC)
+        htf_bias = get_htf_bias(
+            m1_eu, d,
+            sweep_pips=HTF_SWEEP_PIPS,
+            h4_lookback_days=H4_LOOKBACK_DAYS,
+            h1_lookback_bars=H1_LOOKBACK_BARS,
+        )
+        if htf_bias["combined"] == "neutral":
+            htf_neutral_days += 1
+            continue
+
+        day_mask = m1_with_sigs["datetime"].dt.date == d
+        m1_day   = m1_with_sigs[day_mask].reset_index(drop=True)
+        if m1_day.empty:
+            continue
+
+        day_trades, capital = _backtest_day_v3(d, m1_day, htf_bias, cycle, capital)
+        all_trades.extend(day_trades)
+
+        if (i + 1) % 50 == 0:
+            print(f"  [{i+1}/{len(trading_days)}] {d} | capital: ${capital:,.2f} | trades: {len(all_trades)}")
+
+    print(f"\n  Dias sin sesgo HTF (neutral): {htf_neutral_days}")
+    print(f"  Trades totales: {len(all_trades)}")
+    print(f"  Capital final:  ${capital:,.2f}")
+    print(f"  P&L total:      ${capital - initial_capital:+,.2f}")
+
+    df = pd.DataFrame(all_trades)
+    if not df.empty:
+        wins  = (df["result"] == "win").sum()
+        bes   = (df["result"] == "be").sum()
+        total = len(df)
+        print(f"  Win rate:       {wins}/{total} = {100*wins/total:.1f}%")
+        print(f"  Break-even:     {bes}/{total} = {100*bes/total:.1f}%")
+
+    return df
+
 
 def run(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
     """Ejecuta el backtest completo para un ano. Retorna DataFrame de trades."""
@@ -542,11 +840,13 @@ def save_results(df: pd.DataFrame, year: int) -> Path:
 # ---------------------------------------------------------------------------
 
 def _parse_args():
-    p = argparse.ArgumentParser(description="Backtester walk-forward V2")
+    p = argparse.ArgumentParser(description="Backtester walk-forward V2/V3")
     p.add_argument("--year",    type=int, action="append", dest="years",
                    help="Ano (repetir para multiples: --year 2024 --year 2025)")
     p.add_argument("--capital", type=float, default=CAPITAL,
                    help=f"Capital inicial USD (default: {CAPITAL})")
+    p.add_argument("--version", type=int, default=2, choices=[2, 3],
+                   help="Version de la estrategia: 2 (sweep) o 3 (HTF+induccion+BE)")
     return p.parse_args()
 
 
@@ -554,9 +854,12 @@ if __name__ == "__main__":
     args  = _parse_args()
     years = args.years or BACKTEST_YEARS
 
+    runner = run_v3 if args.version == 3 else run
+    label  = f"V{args.version}"
+
     for yr in years:
-        df = run(yr, initial_capital=args.capital)
+        df = runner(yr, initial_capital=args.capital)
         if not df.empty:
             save_results(df, yr)
 
-    print("\n[DONE] Backtesting V2 completado.")
+    print(f"\n[DONE] Backtesting {label} completado.")
