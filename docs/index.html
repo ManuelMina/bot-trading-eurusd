@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot EURUSD — Reporte de Estrategia y Backtesting</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #21262d;
+    --border:    #30363d;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --yellow:    #d29922;
+    --blue:      #58a6ff;
+    --purple:    #bc8cff;
+    --orange:    #ffa657;
+    --teal:      #39d353;
+    --accent:    #238636;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 24px;
+  }
+  .nav-brand {
+    font-weight: 700; font-size: 15px; color: var(--blue);
+    padding: 14px 24px 14px 0;
+    border-right: 1px solid var(--border);
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+  .nav-tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    background: none; border: none; color: var(--muted);
+    padding: 12px 16px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* LAYOUT */
+  .page { display: none; padding: 32px 28px; max-width: 1300px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  h2 { font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  /* CARDS */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .blue  { color: var(--blue); }
+  .yellow { color: var(--yellow); }
+  .orange { color: var(--orange); }
+  .purple { color: var(--purple); }
+
+  /* CHART PANELS */
+  .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .panel canvas { display: block; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--green); }
+  .badge-red   { background: rgba(248,81,73,.15);  color: var(--red); }
+  .badge-yellow{ background: rgba(210,153,34,.15); color: var(--yellow); }
+  .badge-blue  { background: rgba(88,166,255,.15); color: var(--blue); }
+
+  /* DIVIDER */
+  .section-gap { margin-bottom: 28px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* COMPARISON */
+  .compare-table th:first-child, .compare-table td:first-child { color: var(--muted); }
+  .compare-table th { font-size: 12px; }
+  .highlight-col { background: rgba(88,166,255,.06); }
+  .winner { font-weight: 700; }
+
+  /* STRATEGY DIAGRAM */
+  .diagram-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+
+  /* INSIGHT BOXES */
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .insight {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+  }
+  .insight.good  { border-left-color: var(--green); }
+  .insight.bad   { border-left-color: var(--red); }
+  .insight.info  { border-left-color: var(--blue); }
+  .insight.warn  { border-left-color: var(--yellow); }
+  .insight-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .insight-body  { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+
+  /* LEVEL CARDS */
+  .level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .level-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .level-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .level-dir  { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .level-wr   { font-size: 20px; font-weight: 700; }
+  .level-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  @media (max-width: 768px) {
+    .chart-grid, .chart-grid-3, .chart-grid-2, .insight-grid { grid-template-columns: 1fr; }
+    nav { padding: 0 12px; }
+    .page { padding: 20px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">📈 Bot EURUSD</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('estrategia')">Estrategia</button>
+    <button class="tab-btn" onclick="showTab('v1')">Backtest V1</button>
+    <button class="tab-btn" onclick="showTab('v2')">Backtest V2</button>
+    <button class="tab-btn" onclick="showTab('comparativa')">Comparativa</button>
+  </div>
+</nav>
+
+<!-- ============================================================ ESTRATEGIA -->
+<div id="estrategia" class="page active">
+  <h1>Estrategia de Trading</h1>
+  <p class="subtitle">Reacción al mercado — EURUSD M1/M5 · 07:00–10:00 Colombia · Riesgo 1% · TP 1:3</p>
+
+  <!-- DIAGRAMA PRINCIPAL -->
+  <div class="diagram-container">
+    <svg viewBox="0 0 1100 620" width="100%" style="max-width:1100px; display:block; margin:0 auto;">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#8b949e"/>
+        </marker>
+        <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#3fb950"/>
+        </marker>
+        <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#f85149"/>
+        </marker>
+        <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
+        </marker>
+      </defs>
+
+      <!-- BG panels -->
+      <!-- Confirmations panel bg -->
+      <rect x="610" y="270" width="460" height="300" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="840" y="293" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif">CONFIRMACIONES</text>
+
+      <!-- === BOXES === -->
+      <!-- 1. Día operativo -->
+      <rect x="430" y="20" width="220" height="48" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="540" y="40" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold" font-family="sans-serif">INICIO DEL DÍA</text>
+      <text x="540" y="56" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif">Lunes–Viernes · Sin festivos NY</text>
+
+      <!-- 2. Ciclo del día -->
+      <rect x="430" y="110" width="220" height="60" rx="8" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+      <text x="540" y="132" text-anchor="middle" fill="#d29922" font-size="12" font-weight="bold" font-family="sans-serif">CICLO DEL DÍA</text>
+      <text x="540" y="148" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Normal · Knockout · Sierra</text>
+      <text x="540" y="162" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Basado en rango Asia M5</text>
+
+      <!-- 2b. Knockout filtrado -->
+      <rect x="720" y="110" width="150" height="48" rx="8" fill="rgba(248,81,73,.1)" stroke="#f85149" stroke-width="1.5"/>
+      <text x="795" y="130" text-anchor="middle" fill="#f85149" font-size="11" font-weight="bold" font-family="sans-serif">KNOCKOUT</text>
+      <text x="795" y="146" text-anchor="middle" fill="#f85149" font-size="10" font-family="sans-serif">→ No operar (WR &lt;25%)</text>
+
+      <!-- 3. Ventana operativa -->
+      <rect x="430" y="215" width="220" height="48" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="540" y="234" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold" font-family="sans-serif">VENTANA OPERATIVA</text>
+      <text x="540" y="251" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">07:00 – 10:00 Colombia · M1</text>
+
+      <!-- 4. Niveles clave -->
+      <rect x="20" y="215" width="360" height="130" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+      <text x="200" y="238" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold" font-family="sans-serif">CATÁLOGO DE NIVELES CLAVE</text>
+      <!-- Asia high -->
+      <rect x="30" y="248" width="100" height="36" rx="5" fill="rgba(248,81,73,.12)" stroke="#f85149" stroke-width="1"/>
+      <text x="80" y="264" text-anchor="middle" fill="#f85149" font-size="10" font-weight="bold" font-family="sans-serif">Asia High</text>
+      <text x="80" y="278" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Peso 2 · SHORT</text>
+      <!-- Asia low -->
+      <rect x="140" y="248" width="100" height="36" rx="5" fill="rgba(63,185,80,.12)" stroke="#3fb950" stroke-width="1"/>
+      <text x="190" y="264" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="bold" font-family="sans-serif">Asia Low</text>
+      <text x="190" y="278" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Peso 2 · LONG</text>
+      <!-- Prev day high -->
+      <rect x="250" y="248" width="120" height="36" rx="5" fill="rgba(248,81,73,.08)" stroke="#f85149" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="310" y="264" text-anchor="middle" fill="#f85149" font-size="10" font-family="sans-serif">Prev Day High</text>
+      <text x="310" y="278" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Peso 3 · SHORT</text>
+      <!-- Prev day low -->
+      <rect x="30" y="295" width="120" height="36" rx="5" fill="rgba(63,185,80,.08)" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="90" y="311" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif">Prev Day Low</text>
+      <text x="90" y="325" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Peso 3 · LONG</text>
+      <!-- Magnets -->
+      <rect x="165" y="295" width="205" height="36" rx="5" fill="rgba(88,166,255,.08)" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="267" y="311" text-anchor="middle" fill="#58a6ff" font-size="10" font-family="sans-serif">Magnetos 00:00 NY · 07:30 NY</text>
+      <text x="267" y="325" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Peso 1 · AMBOS</text>
+
+      <!-- 5. Detección de barrido -->
+      <rect x="430" y="310" width="220" height="64" rx="8" fill="#21262d" stroke="#bc8cff" stroke-width="1.5"/>
+      <text x="540" y="330" text-anchor="middle" fill="#bc8cff" font-size="12" font-weight="bold" font-family="sans-serif">BARRIDO DETECTADO</text>
+      <text x="540" y="346" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Precio cruza nivel ≥ 1 pip</text>
+      <text x="540" y="360" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">desde el lado correcto (cierre anterior)</text>
+
+      <!-- 6. Vela de fuerza -->
+      <rect x="430" y="425" width="220" height="64" rx="8" fill="#21262d" stroke="#ffa657" stroke-width="1.5"/>
+      <text x="540" y="445" text-anchor="middle" fill="#ffa657" font-size="12" font-weight="bold" font-family="sans-serif">VELA DE FUERZA</text>
+      <text x="540" y="462" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Cuerpo ≥ cuerpo del barrido</text>
+      <text x="540" y="476" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Máximo 7 barras M1 después</text>
+
+      <!-- 7. Confirmaciones -->
+      <rect x="625" y="310" width="155" height="40" rx="7" fill="#21262d" stroke="#3fb950" stroke-width="1"/>
+      <text x="702" y="328" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold" font-family="sans-serif">Divergencia</text>
+      <text x="702" y="342" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">EUR vs GBP · nuevo extremo sin eco</text>
+
+      <rect x="795" y="310" width="155" height="40" rx="7" fill="#21262d" stroke="#39d353" stroke-width="1"/>
+      <text x="872" y="328" text-anchor="middle" fill="#39d353" font-size="11" font-weight="bold" font-family="sans-serif">Teoría de Cuartos</text>
+      <text x="872" y="342" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Bloque 6h · cuarto actual saca extremo</text>
+
+      <rect x="625" y="365" width="155" height="40" rx="7" fill="#21262d" stroke="#58a6ff" stroke-width="1"/>
+      <text x="702" y="383" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="bold" font-family="sans-serif">Magneto</text>
+      <text x="702" y="397" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Precio por encima/abajo del nivel</text>
+
+      <rect x="795" y="365" width="155" height="40" rx="7" fill="#21262d" stroke="#d29922" stroke-width="1"/>
+      <text x="872" y="383" text-anchor="middle" fill="#d29922" font-size="11" font-weight="bold" font-family="sans-serif">Gap Semanal</text>
+      <text x="872" y="397" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Lunes vs cierre viernes · 4ª conf.</text>
+
+      <rect x="625" y="420" width="325" height="40" rx="7" fill="rgba(63,185,80,.1)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="787" y="438" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold" font-family="sans-serif">Mínimo 2 de 3 confirmaciones activas</text>
+      <text x="787" y="452" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">(alineadas con dirección del barrido)</text>
+
+      <!-- 8. Trade entry -->
+      <rect x="430" y="535" width="220" height="60" rx="8" fill="rgba(63,185,80,.1)" stroke="#3fb950" stroke-width="2"/>
+      <text x="540" y="556" text-anchor="middle" fill="#3fb950" font-size="13" font-weight="bold" font-family="sans-serif">ENTRADA AL TRADE</text>
+      <text x="540" y="572" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">SL: extremo barrido + 2 pips</text>
+      <text x="540" y="586" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">TP: 1:3 · Riesgo: 1% del capital</text>
+
+      <!-- T1/T2/T3 -->
+      <rect x="20" y="425" width="360" height="170" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+      <text x="200" y="448" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold" font-family="sans-serif">GESTIÓN DE TRADES DIARIOS</text>
+      <!-- T1 -->
+      <rect x="32" y="458" width="100" height="120" rx="6" fill="rgba(88,166,255,.08)" stroke="#58a6ff" stroke-width="1"/>
+      <text x="82" y="477" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold" font-family="sans-serif">T1</text>
+      <text x="82" y="493" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Primer trade</text>
+      <text x="82" y="510" text-anchor="middle" fill="#f85149" font-size="10" font-family="sans-serif">Pierde →</text>
+      <text x="82" y="523" text-anchor="middle" fill="#f85149" font-size="9" font-family="sans-serif">Cerrar día</text>
+      <text x="82" y="542" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif">Gana →</text>
+      <text x="82" y="555" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">Buscar T2</text>
+      <!-- T2 -->
+      <rect x="143" y="458" width="100" height="120" rx="6" fill="rgba(88,166,255,.08)" stroke="#58a6ff" stroke-width="1"/>
+      <text x="193" y="477" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold" font-family="sans-serif">T2</text>
+      <text x="193" y="493" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Solo si T1 ganó</text>
+      <text x="193" y="510" text-anchor="middle" fill="#f85149" font-size="10" font-family="sans-serif">Pierde →</text>
+      <text x="193" y="523" text-anchor="middle" fill="#f85149" font-size="9" font-family="sans-serif">Cerrar día</text>
+      <text x="193" y="542" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif">Gana →</text>
+      <text x="193" y="555" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">Eval. T3</text>
+      <!-- T3 -->
+      <rect x="254" y="458" width="116" height="120" rx="6" fill="rgba(210,153,34,.08)" stroke="#d29922" stroke-width="1"/>
+      <text x="312" y="477" text-anchor="middle" fill="#d29922" font-size="12" font-weight="bold" font-family="sans-serif">T3 EXCELENCIA</text>
+      <text x="312" y="493" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">T1+T2 ganaron</text>
+      <text x="312" y="507" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">3 confirmaciones</text>
+      <text x="312" y="521" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Vela ≥1.5× prom</text>
+      <text x="312" y="535" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Antes 09:30 Col</text>
+      <text x="312" y="552" text-anchor="middle" fill="#d29922" font-size="10" font-family="sans-serif">→ Cerrar día</text>
+
+      <!-- ARROWS -->
+      <!-- Inicio → Ciclo -->
+      <line x1="540" y1="68" x2="540" y2="108" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+      <!-- Ciclo → Knockout -->
+      <line x1="650" y1="140" x2="718" y2="140" stroke="#f85149" stroke-width="1.5" marker-end="url(#arr-red)"/>
+      <!-- Ciclo → Ventana -->
+      <line x1="540" y1="170" x2="540" y2="213" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+      <!-- Ventana → Barrido -->
+      <line x1="540" y1="263" x2="540" y2="308" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+      <!-- Niveles → Barrido -->
+      <line x1="380" y1="280" x2="428" y2="340" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+      <!-- Barrido → Fuerza -->
+      <line x1="540" y1="374" x2="540" y2="423" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+      <!-- Fuerza → Entry -->
+      <line x1="540" y1="489" x2="540" y2="533" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <!-- Confirmaciones → Fuerza check -->
+      <line x1="787" y1="460" x2="650" y2="490" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr-green)"/>
+      <!-- Gestion → Entry label -->
+      <line x1="380" y1="535" x2="428" y2="555" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+    </svg>
+  </div>
+
+  <!-- CICLOS Y CONFIRMACIONES -->
+  <div class="chart-grid-2">
+    <div class="panel">
+      <h3>Ciclos del mercado</h3>
+      <table>
+        <thead><tr><th>Ciclo</th><th>Descripción</th><th>V2 Action</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">Normal</span></td>
+            <td>Precio saca liquidez de ambos lados del rango Asia y regresa</td>
+            <td style="color:var(--green)">Operar</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-red">Knockout</span></td>
+            <td>Saca un lado de Asia y continúa en esa dirección sin regresar</td>
+            <td style="color:var(--red)">Filtrado (WR &lt;25%)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-yellow">Sierra</span></td>
+            <td>Movimiento errático en ambas direcciones — operar solo extremos del rango</td>
+            <td style="color:var(--yellow)">Operar (muestra pequeña)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">RetailHeaven</span></td>
+            <td>Tendencia clara con liquidez abierta pendiente</td>
+            <td style="color:var(--muted)">Poco frecuente</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Niveles clave — dirección del barrido</h3>
+      <div class="level-grid">
+        <div class="level-card">
+          <div class="level-name" style="color:var(--red)">Asia High → SHORT</div>
+          <div class="level-dir">Peso 2 · El mejor setup del sistema</div>
+          <div class="level-wr green">48–65% WR</div>
+          <div class="level-detail">Fake breakout sobre máximo asiático</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:65%;background:var(--green)"></div></div>
+        </div>
+        <div class="level-card">
+          <div class="level-name" style="color:var(--green)">Prev Day Low → LONG</div>
+          <div class="level-dir">Peso 3 · Sólido en 2024</div>
+          <div class="level-wr green">33–50% WR</div>
+          <div class="level-detail">Fake breakdown bajo mínimo anterior</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:50%;background:var(--green)"></div></div>
+        </div>
+        <div class="level-card">
+          <div class="level-name" style="color:var(--green)">Asia Low → LONG</div>
+          <div class="level-dir">Peso 2 · Débil</div>
+          <div class="level-wr red">6–25% WR</div>
+          <div class="level-detail">Frecuentemente es continuación bajista</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:25%;background:var(--red)"></div></div>
+        </div>
+        <div class="level-card">
+          <div class="level-name" style="color:var(--red)">Prev Day High → SHORT</div>
+          <div class="level-dir">Peso 3 · Muy débil</div>
+          <div class="level-wr red">6–20% WR</div>
+          <div class="level-detail">Frecuentemente es continuación alcista</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:20%;background:var(--red)"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ BACKTEST V1 -->
+<div id="v1" class="page">
+  <h1>Backtest V1 — Estrategia de Inducción</h1>
+  <p class="subtitle">Señal basada en pullback a nivel clave (25 barras M1) · Inducción clásica · Sin filtro de ciclo · 2024–2025</p>
+
+  <!-- KPIs 2024 -->
+  <h2>Año 2024</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">253</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value yellow">29.6%</div><div class="kpi-sub">Break-even: 25%</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$534</div><div class="kpi-sub">+53.4% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value red">28.9%</div></div>
+    <div class="kpi"><div class="kpi-label">Profit Factor</div><div class="kpi-value green">1.26</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$1,534</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2024</h3><canvas id="eq_v1_2024" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2024</h3><canvas id="mo_v1_2024" height="180"></canvas></div>
+  </div>
+
+  <!-- KPIs 2025 -->
+  <h2>Año 2025</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">252</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value green">38.5%</div><div class="kpi-sub">Break-even: 25%</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$2,704</div><div class="kpi-sub">+270% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value yellow">13.1%</div></div>
+    <div class="kpi"><div class="kpi-label">Profit Factor</div><div class="kpi-value green">1.88</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$3,704</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2025</h3><canvas id="eq_v1_2025" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2025</h3><canvas id="mo_v1_2025" height="180"></canvas></div>
+  </div>
+
+  <!-- Desglose -->
+  <div class="chart-grid-3">
+    <div class="panel">
+      <h3>Por Ciclo</h3>
+      <canvas id="cyc_v1" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2024</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>208</td><td style="color:var(--red)">20.7%</td><td style="color:var(--red)">−$358</td></tr>
+          <tr><td><b>T2</b></td><td>38</td><td style="color:var(--green)">68.4%</td><td style="color:var(--green)">+$695</td></tr>
+          <tr><td><b>T3</b></td><td>7</td><td style="color:var(--green)">85.7%</td><td style="color:var(--green)">+$197</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2025</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>204</td><td style="color:var(--yellow)">31.4%</td><td style="color:var(--green)">+$900</td></tr>
+          <tr><td><b>T2</b></td><td>44</td><td style="color:var(--green)">70.5%</td><td style="color:var(--green)">+$1,712</td></tr>
+          <tr><td><b>T3</b></td><td>4</td><td style="color:var(--green)">50.0%</td><td style="color:var(--green)">+$92</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight good">
+      <div class="insight-title">T2: motor de rentabilidad</div>
+      <div class="insight-body">El filtro "T1 ganó antes de T2" funciona perfectamente. T2 tiene 68–70% WR consistente en ambos años — muy por encima del break-even del 25%.</div>
+    </div>
+    <div class="insight bad">
+      <div class="insight-title">T1 en 2024: bajo break-even</div>
+      <div class="insight-body">T1 tiene WR 20.7% en 2024, generando −$358 de pérdidas. El sistema sobrevive solo gracias a T2. En 2025 mejora a 31.4%.</div>
+    </div>
+    <div class="insight bad">
+      <div class="insight-title">Drawdown 2024: 28.9%</div>
+      <div class="insight-body">El capital llegó a caer hasta $712 (desde $1,000) antes de recuperarse. Una racha de pérdidas concentrada en enero–agosto 2024.</div>
+    </div>
+    <div class="insight warn">
+      <div class="insight-title">Inconsistencia 2024 vs 2025</div>
+      <div class="insight-body">PF 1.26 en 2024 vs 1.88 en 2025. Diferencia importante. El sistema es rentable en ambos años pero con robustez variable.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ BACKTEST V2 -->
+<div id="v2" class="page">
+  <h1>Backtest V2 — Estrategia de Barrido + Filtro Knockout</h1>
+  <p class="subtitle">Señal basada en sweep de nivel clave · Vela de fuerza ≥ vela del barrido · FILTER_KNOCKOUT=True · 2024–2025</p>
+
+  <!-- KPIs 2024 -->
+  <h2>Año 2024</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">73</div><div class="kpi-sub">vs 253 en V1</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value green">30.1%</div><div class="kpi-sub">Break-even: 25%</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$148</div><div class="kpi-sub">+14.8% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value green">9.7%</div><div class="kpi-sub">vs 28.9% en V1</div></div>
+    <div class="kpi"><div class="kpi-label">Profit Factor</div><div class="kpi-value green">1.29</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$1,148</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2024</h3><canvas id="eq_v2_2024" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2024</h3><canvas id="mo_v2_2024" height="180"></canvas></div>
+  </div>
+
+  <!-- KPIs 2025 -->
+  <h2>Año 2025</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Trades</div><div class="kpi-value blue">52</div><div class="kpi-sub">vs 252 en V1</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value green">38.5%</div><div class="kpi-sub">Break-even: 25%</div></div>
+    <div class="kpi"><div class="kpi-label">P&L</div><div class="kpi-value green">+$309</div><div class="kpi-sub">+30.9% del capital</div></div>
+    <div class="kpi"><div class="kpi-label">Max Drawdown</div><div class="kpi-value green">4.9%</div><div class="kpi-sub">vs 13.1% en V1</div></div>
+    <div class="kpi"><div class="kpi-label">Profit Factor</div><div class="kpi-value green">1.88</div></div>
+    <div class="kpi"><div class="kpi-label">Capital Final</div><div class="kpi-value green">$1,309</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2025</h3><canvas id="eq_v2_2025" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2025</h3><canvas id="mo_v2_2025" height="180"></canvas></div>
+  </div>
+
+  <!-- Niveles y desglose -->
+  <div class="chart-grid-2">
+    <div class="panel">
+      <h3>Win Rate por nivel de barrido</h3>
+      <canvas id="levels_chart" height="220"></canvas>
+    </div>
+    <div class="panel">
+      <h3>P&L por nivel de barrido</h3>
+      <canvas id="levels_pnl" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="panel">
+      <h3>Por Ciclo</h3>
+      <canvas id="cyc_v2" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2024</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>61</td><td style="color:var(--yellow)">24.6%</td><td style="color:var(--red)">−$14</td></tr>
+          <tr><td><b>T2</b></td><td>11</td><td style="color:var(--green)">54.5%</td><td style="color:var(--green)">+$128</td></tr>
+          <tr><td><b>T3</b></td><td>1</td><td style="color:var(--green)">100%</td><td style="color:var(--green)">+$34</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2025</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>43</td><td style="color:var(--green)">39.5%</td><td style="color:var(--green)">+$277</td></tr>
+          <tr><td><b>T2</b></td><td>8</td><td style="color:var(--green)">37.5%</td><td style="color:var(--green)">+$43</td></tr>
+          <tr><td><b>T3</b></td><td>1</td><td style="color:var(--red)">0%</td><td style="color:var(--red)">−$10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight good">
+      <div class="insight-title">asia_high → SHORT: el setup estrella</div>
+      <div class="insight-body">48.3% WR en 2024 y 64.7% en 2025. El fake breakout sobre el máximo de Asia durante Londres/NY es el patrón institucional más confiable del sistema.</div>
+    </div>
+    <div class="insight good">
+      <div class="insight-title">MaxDD dramaticamente menor</div>
+      <div class="insight-body">9.7% en 2024 (vs 28.9% V1) y 4.9% en 2025 (vs 13.1% V1). El filtro Knockout elimina las rachas de pérdidas concentradas.</div>
+    </div>
+    <div class="insight bad">
+      <div class="insight-title">asia_low → LONG: muy débil</div>
+      <div class="insight-body">6.2% WR en 2024, 25% en 2025. Cuando el precio rompe bajo el mínimo asiático suele ser continuación bajista genuina, no un fake breakdown.</div>
+    </div>
+    <div class="insight info">
+      <div class="insight-title">T1 se autosustenta en 2025</div>
+      <div class="insight-body">T1 tiene 39.5% WR en 2025 (+$277 por sí solo). V2 no depende de T2 como V1 — el primer trade ya genera valor en 2025.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ COMPARATIVA -->
+<div id="comparativa" class="page">
+  <h1>Comparativa V1 vs V2</h1>
+  <p class="subtitle">Inducción clásica vs Barrido de niveles clave con filtro Knockout</p>
+
+  <div class="chart-grid-2">
+    <div class="panel">
+      <h3>Curvas de Capital — 2024 comparado</h3>
+      <canvas id="eq_cmp_2024" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>Curvas de Capital — 2025 comparado</h3>
+      <canvas id="eq_cmp_2025" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="panel section-gap">
+    <h3>Métricas clave — V1 vs V2</h3>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th>V1 · 2024</th>
+          <th class="highlight-col">V2 · 2024</th>
+          <th>V1 · 2025</th>
+          <th class="highlight-col">V2 · 2025</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Trades totales</b></td>
+          <td>253</td>
+          <td class="highlight-col">73 <span style="color:var(--muted);font-size:11px">(−71%)</span></td>
+          <td>252</td>
+          <td class="highlight-col">52 <span style="color:var(--muted);font-size:11px">(−79%)</span></td>
+        </tr>
+        <tr>
+          <td><b>Win Rate</b></td>
+          <td>29.6%</td>
+          <td class="highlight-col winner green">30.1% ↑</td>
+          <td>38.5%</td>
+          <td class="highlight-col">38.5% =</td>
+        </tr>
+        <tr>
+          <td><b>P&L Absoluto</b></td>
+          <td class="winner green">+$534</td>
+          <td class="highlight-col">+$148</td>
+          <td class="winner green">+$2,704</td>
+          <td class="highlight-col">+$309</td>
+        </tr>
+        <tr>
+          <td><b>P&L % Capital</b></td>
+          <td class="winner green">+53.4%</td>
+          <td class="highlight-col">+14.8%</td>
+          <td class="winner green">+270%</td>
+          <td class="highlight-col">+30.9%</td>
+        </tr>
+        <tr>
+          <td><b>Max Drawdown</b></td>
+          <td style="color:var(--red)">28.9%</td>
+          <td class="highlight-col winner green">9.7% ↓</td>
+          <td style="color:var(--yellow)">13.1%</td>
+          <td class="highlight-col winner green">4.9% ↓</td>
+        </tr>
+        <tr>
+          <td><b>Profit Factor</b></td>
+          <td>1.26</td>
+          <td class="highlight-col winner green">1.29 ↑</td>
+          <td>1.88</td>
+          <td class="highlight-col">1.88 =</td>
+        </tr>
+        <tr>
+          <td><b>T1 Win Rate</b></td>
+          <td style="color:var(--red)">20.7%</td>
+          <td class="highlight-col">24.6%</td>
+          <td>31.4%</td>
+          <td class="highlight-col winner green">39.5% ↑</td>
+        </tr>
+        <tr>
+          <td><b>T2 Win Rate</b></td>
+          <td class="winner green">68.4%</td>
+          <td class="highlight-col">54.5%</td>
+          <td class="winner green">70.5%</td>
+          <td class="highlight-col">37.5%</td>
+        </tr>
+        <tr>
+          <td><b>Capital final</b></td>
+          <td class="winner green">$1,534</td>
+          <td class="highlight-col">$1,148</td>
+          <td class="winner green">$3,704</td>
+          <td class="highlight-col">$1,309</td>
+        </tr>
+        <tr>
+          <td><b>Señal</b></td>
+          <td colspan="2" style="color:var(--muted);font-size:12px">Inducción (pullback a nivel clave 25 barras M1)</td>
+          <td colspan="2" class="highlight-col" style="color:var(--muted);font-size:12px">Sweep de nivel catalogado + vela de fuerza ≥ sweep</td>
+        </tr>
+        <tr>
+          <td><b>Filtro ciclo</b></td>
+          <td colspan="2" style="color:var(--muted);font-size:12px">Ninguno (Knockout incluido)</td>
+          <td colspan="2" class="highlight-col" style="color:var(--muted);font-size:12px">Knockout excluido (WR &lt;25%)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel section-gap">
+    <h3>Win Rate por nivel de barrido (V2) — 2024 vs 2025</h3>
+    <canvas id="levels_compare" height="180"></canvas>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight info">
+      <div class="insight-title">V1 gana en P&L absoluto</div>
+      <div class="insight-body">V1 genera más dinero gracias al mayor volumen de trades (253 vs 73) y un T2 excepcional (68-70% WR). La ventaja de V1 viene del filtro implícito T1→T2.</div>
+    </div>
+    <div class="insight good">
+      <div class="insight-title">V2 gana en robustez</div>
+      <div class="insight-body">MaxDD se reduce a un tercio. El capital nunca cae más del 10% en ningún año. Las señales son más selectivas y el sistema no depende de T2 para sobrevivir.</div>
+    </div>
+    <div class="insight warn">
+      <div class="insight-title">La clave del sistema V1 era T2</div>
+      <div class="insight-body">En V1, T2 generó +$695 en 2024 y +$1,712 en 2025. T1 solo generaba pérdidas en 2024. El sistema completo dependía de un filtro implícito muy específico.</div>
+    </div>
+    <div class="insight info">
+      <div class="insight-title">V2 tiene un patrón claro y explotable</div>
+      <div class="insight-body">asia_high → SHORT tiene 48–65% WR consistente en ambos años. Este único setup genera la mayor parte del P&L de V2 y puede optimizarse de forma aislada.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Parámetros activos — Estado V2 congelado (2026-05-16)</h3>
+    <table>
+      <thead><tr><th>Parámetro</th><th>Valor</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td>SWEEP_MIN_PIPS</td><td><b>1</b></td><td>Pips mínimos para considerar un nivel barrido</td></tr>
+        <tr><td>MIN_SWEEP_WEIGHT</td><td><b>2</b></td><td>Peso mínimo del nivel a monitorear (Asia o mayor)</td></tr>
+        <tr><td>MAX_LEVEL_WEIGHT</td><td><b>3</b></td><td>Excluye prev_week (peso 4) — 0% WR en 2025</td></tr>
+        <tr><td>MAX_BARS_AFTER_SWEEP</td><td><b>7</b></td><td>Barras M1 máximas para esperar vela de fuerza</td></tr>
+        <tr><td>GAP_MIN_PIPS</td><td><b>5</b></td><td>Pips mínimos para considerar gap semanal significativo</td></tr>
+        <tr><td>FILTER_KNOCKOUT</td><td><b>True</b></td><td>Excluye días de ciclo Knockout (WR &lt; break-even)</td></tr>
+        <tr><td>MIN_CONFIRMATIONS</td><td><b>2</b></td><td>Confirmaciones mínimas de 3 posibles para entrar</td></tr>
+        <tr><td>RISK_REWARD</td><td><b>1:3</b></td><td>TP fijo: 3× el riesgo por trade</td></tr>
+        <tr><td>RISK_PCT</td><td><b>1%</b></td><td>Capital arriesgado por trade</td></tr>
+        <tr><td>Resultados V2</td><td colspan="2">reporting/results/v2_knockout/backtest_2024.csv · backtest_2025.csv</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ============================================================ DATA
+const D = {
+  v1_2024: {"equity":[1000.0,990.0,980.1,970.3,960.6,950.99,941.48,932.07,922.74,913.52,904.38,895.34,886.38,877.52,868.75,860.06,851.46,842.94,834.51,826.17,850.95,842.44,834.02,859.04,850.45,841.95,867.2,858.53,849.95,841.45,833.03,824.7,849.44,874.93,866.18,857.52,883.24,874.41,900.64,927.66,918.38,909.2,900.11,891.11,917.84,945.37,935.92,926.56,917.3,908.12,899.04,890.05,881.15,872.34,863.62,854.98,880.63,871.82,863.1,854.47,845.93,837.47,829.1,820.8,812.6,804.47,828.6,820.32,812.12,803.99,795.95,787.99,780.11,772.31,764.59,756.94,749.37,741.88,764.14,756.5,779.19,802.57,794.54,786.6,778.73,770.94,794.07,786.13,778.27,770.49,762.78,755.15,747.6,740.13,732.72,725.4,718.14,710.96,732.29,754.26,776.89,769.12,761.43,784.27,807.8,799.72,823.71,848.42,839.94,865.14,856.49,847.92,839.44,831.05,855.98,881.66,872.84,864.11,855.47,846.92,838.45,830.06,821.76,813.55,837.95,863.09,854.46,845.91,837.46,862.58,888.46,915.11,905.96,896.9,887.93,879.05,870.26,861.56,887.4,914.03,904.89,895.84,922.71,950.39,978.91,1008.27,1038.52,1069.68,1101.77,1090.75,1079.84,1069.04,1101.12,1134.15,1122.81,1111.58,1100.46,1089.46,1122.14,1110.92,1099.81,1088.81,1077.93,1067.15,1056.47,1088.17,1077.29,1066.51,1098.51,1131.47,1120.15,1108.95,1097.86,1086.88,1076.01,1108.29,1141.54,1130.13,1118.82,1152.39,1186.96,1175.09,1163.34,1198.24,1234.19,1271.21,1309.35,1296.26,1283.29,1270.46,1257.76,1245.18,1232.73,1220.4,1208.2,1196.11,1232.0,1268.96,1307.03,1293.96,1281.02,1268.21,1306.25,1293.19,1280.26,1267.46,1305.48,1344.64,1331.2,1371.13,1357.42,1343.85,1384.16,1425.69,1468.46,1512.51,1497.39,1482.41,1467.59,1452.91,1438.38,1424.0,1409.76,1395.66,1381.71,1423.16,1408.93,1394.84,1380.89,1422.31,1408.09,1394.01,1380.07,1366.27,1352.61,1339.08,1379.25,1365.46,1351.81,1392.36,1434.13,1419.79,1462.38,1506.25,1491.19,1476.28,1461.52,1446.9,1432.43,1475.41,1519.67,1565.26,1549.61,1534.11],"monthly":{"2024-01":-165.48,"2024-02":65.61,"2024-03":-45.63,"2024-04":-59.93,"2024-05":53.88,"2024-06":-34.86,"2024-07":165.37,"2024-08":87.6,"2024-09":242.85,"2024-10":48.09,"2024-11":37.41,"2024-12":139.27},"cycles":{"Knockout":{trades:110,wr:28.2,pnl:182.38},"Normal":{trades:138,wr:31.9,pnl:407.1},"Sierra":{trades:5,wr:0,pnl:-55.3}}},
+  v1_2025: {"equity":[1000.0,990.0,980.1,970.3,999.41,1029.39,1060.27,1049.67,1081.16,1070.35,1102.46,1135.53,1124.18,1112.93,1146.32,1180.71,1168.91,1157.22,1191.93,1227.69,1264.52,1302.46,1289.43,1328.12,1367.96,1354.28,1394.91,1380.96,1422.39,1465.06,1509.01,1493.92,1478.98,1523.35,1569.05,1553.36,1537.83,1522.45,1507.22,1492.15,1477.23,1462.46,1447.83,1433.36,1419.02,1404.83,1390.78,1376.88,1363.11,1404.0,1446.12,1431.66,1474.61,1459.86,1445.26,1488.62,1473.74,1459.0,1444.41,1429.96,1415.66,1401.51,1387.49,1373.62,1414.83,1457.27,1500.99,1485.98,1471.12,1515.25,1560.71,1545.1,1529.65,1514.36,1499.21,1544.19,1590.51,1638.23,1687.38,1670.5,1653.8,1703.41,1754.51,1807.15,1861.36,1842.75,1824.32,1806.08,1860.26,1841.66,1823.24,1805.01,1859.16,1840.57,1895.79,1952.66,1933.13,1913.8,1894.66,1951.5,1931.99,1912.67,1893.54,1874.61,1855.86,1837.3,1818.93,1800.74,1854.76,1836.21,1817.85,1799.67,1781.68,1763.86,1746.22,1798.61,1852.57,1908.14,1889.06,1870.17,1851.47,1907.01,1887.94,1944.58,2002.92,1982.89,2042.38,2103.65,2166.76,2231.76,2209.44,2187.35,2165.48,2143.82,2122.38,2101.16,2080.15,2059.35,2038.75,2018.36,1998.18,2058.13,2037.55,2098.67,2161.63,2140.02,2118.62,2097.43,2076.45,2055.69,2035.13,2096.19,2075.23,2054.47,2033.93,2013.59,2074.0,2053.26,2114.85,2093.71,2072.77,2052.04,2113.6,2177.01,2155.24,2219.9,2197.7,2175.72,2153.96,2132.42,2111.1,2089.99,2069.09,2048.4,2027.91,2007.64,1987.56,2047.19,2026.71,2087.52,2150.14,2214.65,2281.08,2258.27,2326.02,2302.76,2279.73,2348.13,2418.57,2394.38,2370.44,2441.55,2417.14,2489.65,2464.76,2538.7,2614.86,2588.71,2562.82,2537.2,2613.31,2691.71,2772.46,2855.64,2827.08,2798.81,2770.82,2853.95,2939.56,2910.17,2881.07,2967.5,3056.52,3148.22,3116.74,3085.57,3054.71,3024.17,2993.93,2963.99,2934.35,2905.0,2992.15,3081.92,3051.1,3020.59,2990.38,2960.48,2930.87,2901.56,2988.61,3078.27,3170.62,3138.91,3233.08,3200.75,3296.77,3263.8,3231.16,3198.85,3166.86,3135.2,3103.84,3196.96,3292.87,3391.65,3357.74,3324.16,3423.88,3526.6,3491.33,3596.07,3703.96],"monthly":{"2025-01":302.46,"2025-02":219.99,"2025-03":-92.48,"2025-04":223.84,"2025-05":297.7,"2025-06":-81.35,"2025-07":291.49,"2025-08":15.38,"2025-09":125.76,"2025-10":578.26,"2025-11":107.54,"2025-12":715.34},"cycles":{"Knockout":{trades:139,wr:32.4,pnl:535.11},"Normal":{trades:107,wr:48.6,pnl:2335.19},"Sierra":{trades:5,wr:0,pnl:-144.97}}},
+  v2_2024: {"equity":[1000.0,1030.0,1019.7,1009.5,999.41,989.41,979.52,969.72,960.03,950.43,940.92,969.15,998.22,988.24,978.36,968.58,958.89,949.3,939.81,930.41,958.32,987.07,977.2,967.43,957.76,948.18,976.62,966.86,957.19,947.62,938.14,966.29,956.62,947.06,937.59,965.71,994.68,984.74,974.89,1004.14,1034.26,1023.92,1054.64,1044.09,1033.65,1064.66,1096.6,1085.63,1074.78,1107.02,1095.95,1084.99,1074.14,1106.36,1139.55,1173.74,1162.0,1150.38,1184.89,1220.44,1208.24,1196.16,1184.19,1172.35,1207.52,1195.45,1183.49,1171.66,1159.94,1148.34,1182.79,1170.96,1159.25,1147.66],"monthly":{"2024-01":19.7,"2024-02":-20.3,"2024-03":-29.68,"2024-04":8.64,"2024-05":-47.95,"2024-06":56.66,"2024-07":-20.21,"2024-08":-10.24,"2024-09":118.14,"2024-10":97.58,"2024-11":-12.41,"2024-12":-12.28},"cycles":{"Normal":{trades:71,wr:29.6,pnl:127.12},"Sierra":{trades:2,wr:50,pnl:20.53}},"levels":{"asia_high":{trades:29,wr:48.3,pnl:277.57},"asia_low":{trades:16,wr:6.2,pnl:-129.15},"prev_day_high":{trades:16,wr:6.2,pnl:-120.02},"prev_day_low":{trades:12,wr:50.0,pnl:119.25}}},
+  v2_2025: {"equity":[1000.0,1030.0,1019.7,1009.5,999.41,989.41,979.52,1008.91,998.82,988.83,1018.49,1008.31,998.22,988.24,1017.89,1048.43,1037.94,1069.08,1058.39,1047.81,1037.33,1068.45,1057.76,1089.5,1122.18,1110.96,1099.85,1132.85,1121.52,1110.3,1099.2,1088.21,1120.85,1109.64,1142.93,1131.5,1120.19,1153.79,1142.26,1176.52,1211.82,1248.17,1235.69,1223.34,1211.1,1198.99,1234.96,1222.61,1259.29,1297.07,1284.1,1271.26,1309.4],"monthly":{"2025-01":30.0,"2025-02":-20.5,"2025-03":-20.67,"2025-04":49.13,"2025-05":20.45,"2025-06":52.57,"2025-07":-11.76,"2025-08":32.31,"2025-09":-11.32,"2025-10":78.81,"2025-11":98.08,"2025-12":12.33},"cycles":{"Normal":{trades:51,wr:37.3,pnl:271.65},"Sierra":{trades:1,wr:100,pnl:37.78}},"levels":{"asia_high":{trades:17,wr:64.7,pnl:292.54},"asia_low":{trades:24,wr:25.0,pnl:7.92},"prev_day_high":{trades:5,wr:20.0,pnl:-10.82},"prev_day_low":{trades:6,wr:33.3,pnl:19.79}}}
+};
+
+// ============================================================ CHART HELPERS
+const BREAK_EVEN = 25;
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+
+function eqChart(id, data, color) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [{
+        data: data,
+        borderColor: color,
+        borderWidth: 1.5,
+        fill: { target: 'origin', above: color+'22', below: '#f8514922' },
+        pointRadius: 0,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => '$'+Math.round(v).toLocaleString() }
+        }
+      }
+    }
+  });
+}
+
+function monthlyChart(id, monthly, label) {
+  const labels = Object.keys(monthly).map(k => k.slice(5));
+  const vals   = Object.values(monthly);
+  const colors = vals.map(v => v >= 0 ? '#3fb950' : '#f85149');
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label, data: vals, backgroundColor: colors, borderRadius: 4 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => '$'+v.toFixed(0) }
+        }
+      }
+    }
+  });
+}
+
+function cycleChart(id, d24, d25) {
+  const labels = [...new Set([...Object.keys(d24), ...Object.keys(d25)])];
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '2024',
+          data: labels.map(l => d24[l] ? d24[l].wr : 0),
+          backgroundColor: '#58a6ff88', borderColor: '#58a6ff', borderWidth: 1,
+        },
+        {
+          label: '2025',
+          data: labels.map(l => d25[l] ? d25[l].wr : 0),
+          backgroundColor: '#3fb95088', borderColor: '#3fb950', borderWidth: 1,
+        }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
+  });
+}
+
+function compareEq(id, v1, v2, yr) {
+  const max = Math.max(v1.length, v2.length);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array.from({length: max}, (_, i) => i),
+      datasets: [
+        {
+          label: `V1 ${yr}`,
+          data: v1,
+          borderColor: '#58a6ff', borderWidth: 1.5,
+          fill: false, pointRadius: 0, tension: 0.1,
+        },
+        {
+          label: `V2 ${yr}`,
+          data: v2,
+          borderColor: '#3fb950', borderWidth: 1.5,
+          fill: false, pointRadius: 0, tension: 0.1,
+        }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => '$'+Math.round(v).toLocaleString() }
+        }
+      }
+    }
+  });
+}
+
+function levelsWrChart(id) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  const labels = ['asia_high', 'prev_day_low', 'asia_low', 'prev_day_high'];
+  const beLines = [25, 25, 25, 25];
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '2024 WR%',
+          data: labels.map(l => D.v2_2024.levels[l]?.wr ?? 0),
+          backgroundColor: labels.map(l => {
+            const v = D.v2_2024.levels[l]?.wr ?? 0;
+            return v >= 25 ? '#3fb95088' : '#f8514988';
+          }),
+          borderColor: labels.map(l => {
+            const v = D.v2_2024.levels[l]?.wr ?? 0;
+            return v >= 25 ? '#3fb950' : '#f85149';
+          }),
+          borderWidth: 1,
+        },
+        {
+          label: '2025 WR%',
+          data: labels.map(l => D.v2_2025.levels[l]?.wr ?? 0),
+          backgroundColor: labels.map(l => {
+            const v = D.v2_2025.levels[l]?.wr ?? 0;
+            return v >= 25 ? '#58a6ff88' : '#ffa65788';
+          }),
+          borderColor: labels.map(l => {
+            const v = D.v2_2025.levels[l]?.wr ?? 0;
+            return v >= 25 ? '#58a6ff' : '#ffa657';
+          }),
+          borderWidth: 1,
+        },
+        {
+          label: 'Break-even 25%',
+          data: beLines,
+          type: 'line',
+          borderColor: '#d29922',
+          borderWidth: 1.5,
+          borderDash: [5, 3],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        y: {
+          min: 0, max: 80,
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
+  });
+}
+
+function levelsPnlChart(id) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  const labels = ['asia_high', 'prev_day_low', 'asia_low', 'prev_day_high'];
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '2024 P&L',
+          data: labels.map(l => D.v2_2024.levels[l]?.pnl ?? 0),
+          backgroundColor: labels.map(l => (D.v2_2024.levels[l]?.pnl ?? 0) >= 0 ? '#3fb95088' : '#f8514988'),
+          borderColor: labels.map(l => (D.v2_2024.levels[l]?.pnl ?? 0) >= 0 ? '#3fb950' : '#f85149'),
+          borderWidth: 1, borderRadius: 4,
+        },
+        {
+          label: '2025 P&L',
+          data: labels.map(l => D.v2_2025.levels[l]?.pnl ?? 0),
+          backgroundColor: labels.map(l => (D.v2_2025.levels[l]?.pnl ?? 0) >= 0 ? '#58a6ff88' : '#ffa65788'),
+          borderColor: labels.map(l => (D.v2_2025.levels[l]?.pnl ?? 0) >= 0 ? '#58a6ff' : '#ffa657'),
+          borderWidth: 1, borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        y: {
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => '$' + v.toFixed(0) }
+        }
+      }
+    }
+  });
+}
+
+function levelsCmpChart(id) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  const labels = ['asia_high → SHORT', 'prev_day_low → LONG', 'asia_low → LONG', 'prev_day_high → SHORT'];
+  const keys   = ['asia_high', 'prev_day_low', 'asia_low', 'prev_day_high'];
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '2024 WR%',
+          data: keys.map(k => D.v2_2024.levels[k]?.wr ?? 0),
+          backgroundColor: '#58a6ff88', borderColor: '#58a6ff', borderWidth: 1,
+        },
+        {
+          label: '2025 WR%',
+          data: keys.map(k => D.v2_2025.levels[k]?.wr ?? 0),
+          backgroundColor: '#3fb95088', borderColor: '#3fb950', borderWidth: 1,
+        },
+        {
+          label: 'Break-even 25%',
+          data: [25, 25, 25, 25],
+          type: 'line',
+          borderColor: '#d29922', borderWidth: 1.5,
+          borderDash: [5, 3], pointRadius: 0, fill: false,
+        }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        y: {
+          min: 0, max: 80,
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
+  });
+}
+
+// ============================================================ INIT CHARTS
+window.addEventListener('DOMContentLoaded', () => {
+  // V1
+  eqChart('eq_v1_2024', D.v1_2024.equity, '#58a6ff');
+  eqChart('eq_v1_2025', D.v1_2025.equity, '#3fb950');
+  monthlyChart('mo_v1_2024', D.v1_2024.monthly, 'P&L 2024');
+  monthlyChart('mo_v1_2025', D.v1_2025.monthly, 'P&L 2025');
+  cycleChart('cyc_v1', D.v1_2024.cycles, D.v1_2025.cycles);
+
+  // V2
+  eqChart('eq_v2_2024', D.v2_2024.equity, '#58a6ff');
+  eqChart('eq_v2_2025', D.v2_2025.equity, '#3fb950');
+  monthlyChart('mo_v2_2024', D.v2_2024.monthly, 'P&L 2024');
+  monthlyChart('mo_v2_2025', D.v2_2025.monthly, 'P&L 2025');
+  cycleChart('cyc_v2', D.v2_2024.cycles, D.v2_2025.cycles);
+  levelsWrChart('levels_chart');
+  levelsPnlChart('levels_pnl');
+
+  // Comparativa
+  compareEq('eq_cmp_2024', D.v1_2024.equity, D.v2_2024.equity, 2024);
+  compareEq('eq_cmp_2025', D.v1_2025.equity, D.v2_2025.equity, 2025);
+  levelsCmpChart('levels_compare');
+});
+
+// ============================================================ TAB LOGIC
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
