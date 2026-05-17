@@ -333,3 +333,114 @@ V3 bloqueaba días completos cuando HTF = neutral. V4 no bloquea días — solo 
 | 2026-05-16 | DECISIÓN | Evaluar desactivar HTF "short" para asia_high en 2024-style markets | Si HTF short → WR 13.3% vs HTF neutral → 30.8%, podría ser mejor solo usar neutral |
 | 2026-05-16 | DECISIÓN | Evaluar aumentar BE_TRIGGER_RR de 1.5 a 1.0 (mover BE más rápido) | Con 33% BE rate en 2024, el BE es activo frecuentemente — moverlo antes podría mejorar |
 | 2026-05-16 | DECISIÓN | Cuando valide en 3+ años adicionales, considerar uso en cuenta real con capital mínimo | El MaxDD de 3% permite operar con alta confianza en gestión del riesgo |
+
+---
+
+## 2026-05-16 (continuación) — Cambio de capital, filtros, V5 y propuesta V6
+
+### Cambio de capital y riesgo base
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | PARÁMETRO | Capital: $1,000 → **$200** / Riesgo: 1% → **3%** (≈$6 por trade) | Simular cuenta de fondeo/prop desde el principio con capital realista |
+| 2026-05-16 | OBSERVACIÓN | Con $200/3% los porcentajes de retorno y MaxDD son idénticos; solo cambia el P&L en dólares | La escala del capital no altera la lógica ni la robustez del sistema |
+
+### Filtro de noticias (V4)
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | MEJORA | Filtro de noticias en `config.py`: NFP (primer viernes del mes, 13:30 UTC), ECB (~6×/año, 13:15 UTC), CPI (mensual, 13:30 UTC) — ventana ±60 min | Evitar slippage y spreads extremos durante publicaciones macroeconómicas de alto impacto |
+| 2026-05-16 | OBSERVACIÓN | **El filtro de noticias perjudicó V4 2024**: eliminó ~9 trades con ~33% WR promedio | Las noticias generan algunos de los mejores setups en 2024. El filtro sacó esas operaciones buenas y dejó solo las peores. MaxDD de V4 2024 pasó de ~3% a ~17% |
+| 2026-05-16 | DECISIÓN | Mantener el filtro de noticias de todas formas en producción | Es conservador y protege del peor escenario. Muestra de 9 trades insuficiente para cambiar la regla |
+
+### Fix de horario de verano (DST) — Hora New York exclusiva
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | CORRECCIÓN | Ventana operativa dinámica con `ZoneInfo("America/New_York")` — función `_window_utc(trade_date)` calcula 09:30–13:00 NY en UTC correctamente para EDT y EST | NY cambia entre EDT (UTC-4) en verano y EST (UTC-5) en invierno. El error previo usaba offset fijo |
+| 2026-05-16 | DECISIÓN | **Usar exclusivamente hora New York en toda la documentación y en el bot** | Eliminar referencia a hora Colombia para evitar confusión. La ventana operativa se define en NY, no en Colombia |
+
+### Módulo EQH/EQL
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | MEJORA | Nuevo módulo `analysis/equal_levels.py`: detecta Equal Highs (EQH) y Equal Lows (EQL) en M5 | Zonas de liquidez acumulada (stops de retail) donde el próximo barrido es más probable |
+| 2026-05-16 | REGLA | EQH/EQL: ≥2 swings dentro de 2 pips de tolerancia, nivel intacto (ninguna vela cerró más allá), ventana 7 días previos | Solo niveles no quebrados son candidatos válidos como destino de barrido |
+| 2026-05-16 | REGLA | EQH/EQL **no se incluyen como obstáculos** en el path check al TP (`_tp_path_clear()`) | Los EQH/EQL son destinos probables de barrido, no barreras — excluidos con `if lv.name.startswith("eq_"): continue` |
+
+### Magnetos como confirmación opcional
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | REGLA | Magnetos pasan de confirmación requerida a **opcional**: si confirma dirección → `confidence = "high"` y se incluye en confirmaciones. Si no confirma → `confidence = "normal"` y se entra igual si ≥2 confirmaciones base | Permite operar setups sin magneto cuando las otras confirmaciones son sólidas |
+
+### V5 — Diseño e implementación
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | DECISIÓN | V5: **sweep-only sin inducción**, 3 categorías de niveles, DST-aware, magnetos opcionales, filtro market state M5, TP path check | Explorar si ampliar el catálogo de niveles y agregar filtros adicionales mejora V4 |
+| 2026-05-16 | REGLA | V5 categorías: premium = {asia_high, prev_day_low}, eq = {eq_high, eq_low}, weak = {asia_low, prev_day_high} | Distintas expectativas de WR por tipo de nivel |
+| 2026-05-16 | REGLA | V5 filtro market state: rango M5 pre-ventana < 8 pips → "consolidation" → no operar ese día | Evitar entrar en días sin dirección definida |
+
+### V5 — Resultados (Capital $200 / Riesgo 3%)
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | RESULTADO | **V5 2024**: 28 trades / WR 14.3% (4W · 7BE · 17L) / P&L **−$31.79** / MaxDD **26.3%** / capital final $168.21 | Peor en ambas métricas que V4 2024 |
+| 2026-05-16 | RESULTADO | **V5 2025**: 23 trades / WR 21.7% (5W · 7BE · 11L) / P&L **+$20.12** / MaxDD **11.5%** / capital final $220.12 | Mucho peor que V4 2025 (+$204.48) |
+
+### V5 — Análisis y hallazgos
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | OBSERVACIÓN | **V5 peor que V4 en ambos años**: V4 2025 +$204.48 vs V5 2025 +$20.12; V4 MaxDD 8.7% vs V5 MaxDD 11.5% | Agregar más niveles y filtros no mejoró la estrategia — la complejidad adicional la perjudicó |
+| 2026-05-16 | OBSERVACIÓN | **Niveles débiles siguen siendo inútiles**: asia_low 0% WR (2024), prev_day_high 0% WR (2024) | Frecuentemente son continuación de tendencia, no reversión de barrido |
+| 2026-05-16 | OBSERVACIÓN | **EQH/EQL inconsistentes**: eq_low 37.5% WR en 2024 pero 14.3% en 2025 | Los 3 wins de agosto 9 2024 (eq_low) distorsionan el resultado. No son suficientemente robustos como señal primaria |
+| 2026-05-16 | OBSERVACIÓN | **asia_high 0% WR en V5 2024 (10 trades)** — el nivel más fuerte de V4 falla en V5 | La ventana DST corregida desplaza algunos sweeps de asia_high a horario diferente; la calidad de esos setups es menor |
+| 2026-05-16 | DECISIÓN | **V4 permanece como versión de producción** — la selectividad extrema (2 niveles: asia_high + prev_day_low) es la clave del MaxDD bajo | No agregar niveles débiles ni EQH/EQL como señal primaria |
+
+### V6 — Propuesta y diseño conceptual
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | DECISIÓN | **V6 = V1 (señal de inducción) + mejoras de control de riesgo, sin tocar la señal de entrada** | V1 tiene el WR más alto (29.6% / 38.5%) pero MaxDD 28.9%. El problema no es la señal sino la gestión del riesgo |
+| 2026-05-16 | REGLA | **V6 mejora 1 — Break-even 1.5×**: mover SL a break-even cuando el trade llega a 1.5× el riesgo | Mayor impacto demostrado: redujo MaxDD de 28.9% (V1) a 9.7% (V2+BE) a 3% (V4). Es la herramienta de riesgo más efectiva del sistema. **Por qué documentarlo**: si V6 falla, se puede desactivar para diagnosticar si el BE está cerrando trades ganadores prematuramente |
+| 2026-05-16 | REGLA | **V6 mejora 2 — FILTER_KNOCKOUT = True**: no operar días de ciclo Knockout | WR < break-even en todas las versiones. **Por qué documentarlo**: si V6 tiene muy pocos trades, se puede desactivar para ver el impacto en volumen |
+| 2026-05-16 | REGLA | **V6 mejora 3 — HTF veto permisivo**: neutral allowed; solo veta si H4/H1 contradicen explícitamente la dirección | La versión permisiva (V4) funciona mejor que la restrictiva (V3 que bloqueaba días neutrales). **Por qué documentarlo**: si V6 tiene muchos trades malos, se puede hacer más restrictivo |
+| 2026-05-16 | REGLA | **V6 mejora 4 — Filtro de noticias ±60 min** (NFP, ECB, CPI) | Protección de worst-case. **Por qué documentarlo**: si el filtro elimina buenos setups (como en V4 2024), se puede ajustar la ventana de ±30 min |
+| 2026-05-16 | REGLA | **V6 mejora 5 — Ventana operativa 09:30–13:00 NY con DST fix** | Eliminar el error de hora de verano. **Por qué documentarlo**: si ciertos trades buenos quedan fuera de la ventana, se puede ampliar a 09:00–13:30 NY |
+| 2026-05-16 | OBSERVACIÓN | **V6 NO elimina niveles débiles** — V1 operaba todos. La inducción filtra naturalmente los malos setups | El problema de V5 fue cambiar la señal (sweep sin inducción), no el número de niveles. La inducción es el filtro natural implícito |
+| 2026-05-16 | DECISIÓN | **Hora NY exclusiva en todo el sistema** — eliminar hora Colombia del código y documentación | El usuario y el bot operan en hora NY. Mezclar zonas horarias genera confusión y errores en DST |
+
+---
+
+## 2026-05-16 (continuación) — V6: implementación y resultados
+
+### V6 — Implementación técnica
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | MEJORA | `_window_v6(trade_date)` — retorna ((h,m),(h,m)) en UTC para 09:30–13:00 NY con DST automático | Precisión de minutos necesaria porque 09:30 no cae en hora exacta |
+| 2026-05-16 | MEJORA | `_t3_cutoff_v6(trade_date)` — retorna (h,m) UTC para 12:30 NY, DST-aware | T3 cutoff correcto en NY, antes se usaba Colombia hardcodeado |
+| 2026-05-16 | MEJORA | `_backtest_day_v6()` — señal de inducción V1 + HTF permisivo + BE 1.5× + noticias + ventana NY | Combina la mejor señal de entrada (V1) con los mejores controles de riesgo (V4) |
+| 2026-05-16 | MEJORA | `run_v6()` — loop walk-forward, guarda en `reporting/results/v6/` | Patrón consistente con V4/V5 |
+| 2026-05-16 | MEJORA | CLI actualizado: `--version 6` disponible, default cambia de 5 a 6 | Ejecutar con `python -m engine.backtester --version 6 --year 2024` |
+
+### V6 — Resultados (Capital $200 / Riesgo 3%)
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | RESULTADO | **V6 2024**: 100 trades / WR 25.0% (25W · 20BE · 55L) / P&L **+$122.95** / MaxDD **26.6%** / capital final $322.95 | Equity mensual: Jan −$8, Feb −$1, Mar −$22, Apr +$61, May −$15, Jun −$19, Jul +$49, Aug +$43, Sep +$42, Oct −$57, Nov +$7, Dec +$41 |
+| 2026-05-16 | RESULTADO | **V6 2025**: 93 trades / WR 23.7% (22W · 18BE · 53L) / P&L **+$65.06** / MaxDD **43.9%** / capital final $265.04 | Equity mensual: Jan +$144, Feb +$7, Mar +$7, Apr −$33, May −$19, Jun +$36, Jul −$31, Aug +$56, Sep +$31, Oct −$56, Nov −$48, Dec −$28 |
+| 2026-05-16 | RESULTADO | HTF breakdown 2024: long 25 trades WR 24.0% · neutral 53 trades WR 22.6% · short 22 trades WR 31.8% | HTF short ligeramente mejor; neutral genera el mayor volumen sin perjudicar WR |
+| 2026-05-16 | RESULTADO | HTF breakdown 2025: long 34 trades WR 20.6% · neutral 39 trades WR 25.6% · short 20 trades WR 25.0% | HTF neutral y short equiparados; HTF permisivo confirmado como decisión correcta |
+
+### V6 — Análisis y comparativa
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | OBSERVACIÓN | **V6 positivo en ambos años** (+$122.95 y +$65.06) — primer caso de estrategia rentable en 2024 entre las versiones con inducción | V1 tenía alto WR pero alto MaxDD; V6 agrega controles de riesgo y sigue siendo positivo |
+| 2026-05-16 | OBSERVACIÓN | **V6 MaxDD es alto**: 26.6% en 2024 y 43.9% en 2025 — significativamente peor que V4 (17.1% y 8.7%) | El alto número de trades (100/93 vs 27/23 en V4) amplifica las rachas de pérdidas. El BE ayuda pero no es suficiente contra 55–53 trades perdedores |
+| 2026-05-16 | OBSERVACIÓN | **V6 vs V4 en 2025**: V4 +$204.48 / MaxDD 8.7% vs V6 +$65.06 / MaxDD 43.9% — V4 claramente superior en 2025 | V4 selectividad extrema (2 niveles, 23 trades) sigue siendo más rentable y segura que V6 inducción genérica |
+| 2026-05-16 | OBSERVACIÓN | **V6 2025: MaxDD de 43.9% no aceptable para cuenta real** — pico de $422 → piso de $244 (perder 42% del pico) | Una cuenta prop/fondeo típicamente cierra a 10% drawdown. V6 no es apto para uso en vivo aún |
+| 2026-05-16 | DECISIÓN | **V4 sigue siendo producción; V6 queda como experimento de base** — documentado como versión de referencia para futuras mejoras de señal de inducción | V6 demuestra que la inducción + controles funciona en 2024 pero no escala bien a 2025. Próxima línea de investigación: filtrar inductiones con criterio adicional (ej: solo si Asia range fue >15 pips, o solo si hay divergencia activa) |

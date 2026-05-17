@@ -31,7 +31,7 @@ La documentación completa de la estrategia está en [ESTRATEGIA.md](ESTRATEGIA.
 - **Broker/Plataforma:** MetaTrader 5 (MT5 instalado, broker configurado, sin capital real)
 - **Librería MT5:** `MetaTrader5` (pip install MetaTrader5)
 - **Datos:** MT5 histórico local + CSV como caché para backtesting
-- **Zona horaria del usuario:** Colombia (UTC-5, sin cambio horario de verano)
+- **Zona horaria operativa:** New York (EDT = UTC-4 en verano, EST = UTC-5 en invierno). Todo en hora NY.
 - **Zona horaria MT5:** Verificar al conectar; normalizar todo a UTC internamente
 
 ---
@@ -48,7 +48,7 @@ BOT TRADING/
 │   ├── fetcher.py             ← conexión MT5 → descarga OHLCV histórico
 │   └── cache/                 ← CSVs de datos descargados (no commitear datos grandes)
 ├── analysis/
-│   ├── asia_range.py          ← High/Low de la sesión 19:00-00:00 Colombia
+│   ├── asia_range.py          ← High/Low de la sesión asiática (hora NY, DST-aware)
 │   ├── opening_magnets.py     ← niveles 00:00 NY y 07:30 NY + sesgo direccional
 │   ├── cycle_detector.py      ← Normal / Knockout / Retail Heaven / Sierra
 │   ├── induction_detector.py  ← pullback a nivel clave → rebote → nivel de SL
@@ -69,21 +69,21 @@ BOT TRADING/
 ## Parámetros clave (ver config.py)
 
 ```python
-CAPITAL              = 1_000    # USD (para backtesting)
-RISK_PCT             = 0.01     # 1% por trade
+CAPITAL              = 200      # USD (cuenta de fondeo/prop)
+RISK_PCT             = 0.03     # 3% por trade (≈$6 con $200)
 RISK_REWARD          = 3.0      # TP fijo 1:3
 SL_BUFFER_PIPS       = 2        # pips extra sobre el extremo de inducción
 SYMBOL_MAIN          = "EURUSD"
 SYMBOL_DIV           = "GBPUSD"
 TF_ANALYSIS          = "M5"
 TF_ENTRY             = "M1"
-TRADING_START_COL    = "07:00"  # hora Colombia
-TRADING_END_COL      = "10:00"  # hora Colombia
-TRADING_T3_CUTOFF    = "09:30"  # hora Colombia — último momento para T3
-ASIA_START_COL       = "19:00"  # hora Colombia
-ASIA_END_COL         = "00:00"  # hora Colombia (día siguiente)
-MAGNET_1_NY          = "00:00"  # hora NY
-MAGNET_2_NY          = "07:30"  # hora NY
+TRADING_START_NY     = "09:30"  # hora New York (DST-aware)
+TRADING_END_NY       = "13:00"  # hora New York (DST-aware)
+TRADING_T3_CUTOFF_NY = "12:30"  # hora New York — último momento para T3
+ASIA_START_NY        = "19:00"  # hora New York (día anterior)
+ASIA_END_NY          = "00:00"  # hora New York
+MAGNET_1_NY          = "00:00"  # hora New York
+MAGNET_2_NY          = "07:30"  # hora New York
 BACKTEST_YEARS       = [2024, 2025]
 SIERRA_SWEEP_PIPS    = 3        # pips mínimos para confirmar barrido Sierra (ajustable)
 MAX_TRADES_DAY       = 2        # máximo trades normales por día
@@ -135,7 +135,7 @@ T3: tercer trade (solo si T1+T2 ganaron Y excellence_score == True)
 - Las 3 confirmaciones activas simultáneamente (divergencia + cuartos + apertura)
 - Inducción limpia (precio tocó el nivel con precisión)
 - Vela de fuerza con body ≥ `EXCELLENCE_BODY_MULT` × promedio últimas `EXCELLENCE_BODY_LOOKBACK` velas
-- Entrada antes de `TRADING_T3_CUTOFF` (09:30 Colombia)
+- Entrada antes de `TRADING_T3_CUTOFF_NY` (12:30 NY)
 
 **Si el backtesting muestra win rate negativo en T3:**
 Revisar y ajustar condiciones en este orden (documentar cada cambio en `CHANGELOG.md`):
@@ -171,8 +171,9 @@ Revisar y ajustar condiciones en este orden (documentar cada cambio en `CHANGELO
 
 ### Zona horaria
 - Todo el procesamiento interno en **UTC**.
-- La conversión a hora Colombia (UTC-5) solo para mostrar resultados y filtrar la ventana operativa.
-- NY cambia de horario en marzo y noviembre; Colombia siempre es UTC-5. Manejar el offset dinámicamente.
+- La referencia externa es **hora New York** (NY) — usar `ZoneInfo("America/New_York")` para conversiones.
+- NY cambia entre EDT (UTC-4) y EST (UTC-5) en marzo y noviembre. Manejar el offset dinámicamente.
+- **No usar hora Colombia** en ninguna parte del código ni de la documentación.
 
 ### Ciclo Sierra
 - En Sierra: esperar sweep del High o Low del rango errático.
