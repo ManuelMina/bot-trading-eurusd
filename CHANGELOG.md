@@ -471,3 +471,79 @@ V3 bloqueaba días completos cuando HTF = neutral. V4 no bloquea días — solo 
 | 2026-05-16 | RESULTADO | **V6 2025 post-fix**: 100 trades (era 93) / WR 23.0% (era 23.7%) / P&L **+$33.42** (era +$65.06) / MaxDD 44.2% | Misma tendencia: magneto único genera más setups, pero de peor calidad en promedio |
 | 2026-05-16 | OBSERVACIÓN | **El "conflicto" entre ambos magnetos era un filtro implícito de calidad** — cuando 00:00 NY y 07:30 NY apuntaban en direcciones opuestas, el trade no recibía confirmación magneto → menos trades → mejores trades | La corrección es correcta (solo usar 07:30 NY es la regla de la estrategia), pero revela que el conflicto accidentalmente filtraba malos setups. Pendiente: evaluar si añadir otro filtro explícito compensa esta pérdida |
 | 2026-05-16 | DECISIÓN | **V4 sigue siendo producción con resultados ligeramente ajustados** — V4 2025: +$192.34 / MaxDD 8.7% (antes +$204.48). El sistema sigue siendo sólido | La diferencia mínima confirma que V4 no dependía de la ambigüedad del magneto |
+
+---
+
+## 2026-05-17 — Análisis V6 y diseño de V7
+
+### Análisis V6 — Hallazgos clave
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | OBSERVACIÓN | **Comparativa definitiva V4 vs V6**: V4 2024 +$0.89 (27 trades, DD 17%) / V4 2025 +$192.34 (24 trades, DD 8.7%). V6 2024 +$77.33 (105 trades, DD 28.8%) / V6 2025 +$33.42 (100 trades, DD 44.2%) | V4 es mejor en calidad (menos trades, menor DD). V6 genera más volumen pero peor resultado en 2025. El sweep actúa como filtro de calidad natural que V1 (inducción pura) no tiene |
+| 2026-05-17 | OBSERVACIÓN | **Mejor combinación de confirmaciones en V6**: `quarters\|magnets` WR 34.6%/43.5%, P&L +$98.87/+$150.27. La combinación `divergence\|magnets` es la peor: WR 15.6%/12.9%, P&L -$45.29/-$90.23 en ambos años | La divergencia sola o con solo magnetos destruye capital de forma consistente. La divergencia suma cuando hay quarters+magnets pero los deteriora cuando está sola |
+| 2026-05-17 | OBSERVACIÓN | **Entries después de 10:00 NY no ganan**: 17:xx UTC (13:xx NY) = WR 0%/0% en ambos años. 15:xx-16:xx UTC = pérdidas netas. Las ganancias están en 13:xx-14:xx UTC (08:xx-10:xx NY) | La estructura del mercado en las primeras 2 horas post-magneto es la más predecible |
+| 2026-05-17 | OBSERVACIÓN | **T2 supera a T1 consistentemente**: T1 WR 21.2%/17.8% P&L +$0.48/-$113.17. T2 WR 31.8%/39.1% P&L +$72.53/+$155.41 | T2 se beneficia de efecto selección: solo corre en días que T1 ganó (días de buena estructura). En V7 se cambia esta lógica |
+| 2026-05-17 | OBSERVACIÓN | **Condición de excelencia T3 no funciona en 2024**: 18 trades seleccionados, WR 16.7%, P&L -$20.39. La condición de body mult no discrimina calidad correctamente | El multiplicador de cuerpo de vela es un proxy incorrecto de "buen setup" |
+| 2026-05-17 | OBSERVACIÓN | **Asimetría direccional en `quarters\|magnets`**: 2024 shorts WR 53.3% P&L +$117.30 / 2024 longs WR 9.1% P&L -$18.43. Refleja tendencia macro: EURUSD fue bajista en 2024, alcista en 2025 | La asimetría es estructural por tendencia de largo plazo, no un fallo del sistema |
+
+### Decisiones de diseño V7
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | DECISIÓN | **V7 usa quarters AND magnets obligatoriamente** (no "2 de 3"). Divergencia ya no es confirmación contable | `quarters\|magnets` es la única combinación consistentemente rentable en ambos años. Divergencia cuando sola con magnetos es catastrófica |
+| 2026-05-17 | DECISIÓN | **Ventana operativa V7: 08:00-10:00 NY** (era 09:30-13:00 en V6). Bot analiza desde 07:30 NY (magneto) y 06:00 NY (cuartos) pero trades solo 08:00-10:00 NY | Las ganancias están concentradas en las primeras 2 horas post-magneto. Nada después de 10:00 NY agrega valor |
+| 2026-05-17 | DECISIÓN | **T2 siempre** — se elimina la condición "T2 solo si T1 ganó". T2 corre independientemente del resultado de T1 | Permitir que un segundo setup válido opere aunque T1 haya perdido. Requiere backtest para validar impacto |
+| 2026-05-17 | DECISIÓN | **T3 gating por resultado**: T2 win + T1 win/BE → T3 con señal estándar. T2 win + T1 loss → T3 solo si divergencia también presente. T2 loss → no T3 | Reemplaza condición de excelencia (body mult) que no funcionó en 2024. La divergencia como gate de calidad en T3 post-pérdida es comprobable y más limpia |
+| 2026-05-17 | DECISIÓN | **Excellence condition eliminada** para T3. Body mult fue condición provisional desde V1, nunca validada positivamente | WR de T3 con excellence en 2024: 16.7% negativo. La condición era contraproducente |
+| 2026-05-17 | DECISIÓN | **H4 como filtro estricto** (en lugar de combined H4+H1 de V6): bloquear si H4 contradice dirección, neutral H4 permite ambas | El sesgo macro de H4 es más robusto que el combinado H4+H1. A evaluar si funciona: si no mejora, se revierte |
+| 2026-05-17 | DECISIÓN | **Filtro de noticias eliminado** en V7 (era ±60 min en V4/V6) | Con ventana 08:00-10:00 NY, los eventos NFP/CPI/ECB (13:15-13:30 UTC = 09:15-09:30 NY EDT) caen dentro de la ventana. ±60 min bloqueaba casi todo el horario operativo. Impacto previo documentado: perjudicó V4 2024 eliminando trades con WR 33% |
+
+### Resultados V7
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | RESULTADO | **V7 2024**: 78 trades / WR 21.8% / BE 21.8% / P&L +$26.59 / MaxDD 44.2% / Capital final $226.59 | Capital inició en $200, cayó a mínimo $108 (marzo), luego recuperó hasta pico $242 y cerró en $226 |
+| 2026-05-17 | RESULTADO | **V7 2025**: 72 trades / WR 36.1% / BE 20.8% / P&L **+$531.21** / MaxDD 25.2% / Capital final $731.21 | Mejor resultado de todos los años en todas las versiones. Capital creció de $200 a pico $785, cerró en $731 |
+| 2026-05-17 | OBSERVACIÓN | **V7 2025 es excepcional**: +165% retorno en un año, WR 36.1%, MaxDD 25.2%. T3 en 2025 WR 66.7% P&L +$134.76 | La combinación quarters+magnets + ventana estrecha + T2 siempre alineó perfectamente con la estructura del mercado EUR/USD en 2025 |
+| 2026-05-17 | OBSERVACIÓN | **V7 2024 tiene problema grave de drawdown**: MaxDD 44.2% con P&L modesto +$26.59. Capital cayó de ~$200 a $108 en el primer trimestre | 2024 fue un año de estructura más difícil para esta configuración. El DD de 44.2% es inaceptable para operación real con capital pequeño |
+| 2026-05-17 | OBSERVACIÓN | **T1 y T2 en V7 2025 tienen WR idéntico** (33.3% ambos). El cambio "T2 siempre" no destruyó la calidad de T2; en 2025 se mantuvo igualando a T1 | En 2024 T1 WR 16.7% vs T2 WR 30.8% — T1 sigue siendo el trade de menor WR. La asimetría 2024 persiste |
+| 2026-05-17 | OBSERVACIÓN | **H4 short en 2025: WR 100%** (3 trades). H4 neutral: WR 32.3% (62 trades). H4 long: WR 42.9% (7 trades). Filtro H4 estricto válido en 2025 | En 2024 H4 neutral WR 16.7% (60 trades) — el neutral en 2024 es problemático. Pendiente: evaluar si filtrar neutral H4 en 2024 hubiera mejorado |
+
+### Comparativa histórica completa
+
+| Versión | Año | Trades | WR | P&L | MaxDD | Señal |
+|---|---|---|---|---|---|---|
+| V4 | 2024 | 27 | 18.5% | +$0.89 | ~17% | Sweep asia_high/prev_day_low |
+| V4 | 2025 | 24 | 45.8% | +$192.34 | 8.7% | Sweep asia_high/prev_day_low |
+| V6 | 2024 | 105 | 23.8% | +$77.33 | 28.8% | Inducción V1, 09:30-13:00 NY |
+| V6 | 2025 | 100 | 23.0% | +$33.42 | 44.2% | Inducción V1, 09:30-13:00 NY |
+| **V7** | **2024** | **78** | **21.8%** | **+$26.59** | **44.2%** | **Inducción V1, quarters+magnets, 08:00-10:00 NY** |
+| **V7** | **2025** | **72** | **36.1%** | **+$531.21** | **25.2%** | **Inducción V1, quarters+magnets, 08:00-10:00 NY** |
+
+### Análisis de drawdown V7 2024 — causas raíz
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | OBSERVACIÓN | **Causa 1 — Q1 2024 sin victorias**: 24 trades en enero (9), febrero (6) y marzo (9), todos pérdidas o BE. Capital: $200 → $108 en solo 3 meses | El mercado EUR/USD tuvo estructura bajista muy consistente en Q1 2024. Los setups de reversión (inducción) fallaron sistemáticamente al no haber liquidez de retorno |
+| 2026-05-17 | OBSERVACIÓN | **Causa 2 — H4 neutral + LONG en 2024**: 38 trades, WR 13%, P&L −$55.33. En 2025 el mismo subgrupo tiene WR 37% | La asimetría es estructural por tendencia macro: EUR/USD bajista en 2024, alcista en 2025. El filtro H4 neutral permite ambas direcciones, pero en un año bajista los longs fallan |
+| 2026-05-17 | OBSERVACIÓN | **Causa 3 — T2 misma dirección que T1-loss**: 18 trades en 2024, WR 17%, P&L −$21.52. En 2025: 16 trades, WR 12%, P&L −$82.37. TODOS los T2-after-T1-loss van en la misma dirección que T1 (cero casos opuestos) | Cuando el mercado rechaza la primera entrada, el T2 que va en la misma dirección tiene WR muy bajo en ambos años. Sugiere que el sesgo del día ya está definido después de T1-loss |
+| 2026-05-17 | OBSERVACIÓN | **La combinación de las 3 causas es devastadora**: Q1 vacío → capital reducido al 54% → riesgo absoluto por trade cae → el sistema opera con menores lotes y el recovery es lento | Con capital compounding, las pérdidas tempranas reducen el tamaño de las posiciones y el sistema tarda más en recuperarse |
+| 2026-05-17 | DECISIÓN | **H4 neutral + filtro de dirección pendiente**: evaluación de un filtro semanal (MA50 semanal) para determinar si el mercado es macro-alcista o macro-bajista y bloquear longs en mercados bajistas o shorts en mercados alcistas | No implementado en V7. Requiere datos semanales adicionales y validación en más años |
+
+### Simulación V7.1 — T2 bloqueado si misma dirección que T1-loss
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | DECISIÓN | **Regla evaluada (no implementada)**: bloquear T2 si la dirección del setup coincide con la dirección de T1-loss | El análisis mostró que todos los T2-after-T1-loss van en la misma dirección que T1. WR de esos T2: 17% en 2024, 12% en 2025 — muy por debajo del break-even |
+| 2026-05-17 | RESULTADO | **V7.1 simulado 2024**: 60 trades / WR 23.3% / P&L +$59.97 / MaxDD 36.7% | Mejora vs V7 2024: +$33.38 adicional, MaxDD reducido de 44.2% a 36.7% |
+| 2026-05-17 | RESULTADO | **V7.1 simulado 2025**: 56 trades / WR 42.9% / P&L +$660.40 / MaxDD 14.1% | Mejora vs V7 2025: +$129.19 adicional, MaxDD reducido de 25.2% a 14.1%. WR sube de 36.1% a 42.9% |
+| 2026-05-17 | DECISIÓN | **V7.1 NO implementada** — la regla es filosóficamente incorrecta | Un setup válido debe operarse independientemente del resultado de T1. T1-loss no invalida el siguiente setup; el mercado no tiene memoria de nuestras posiciones. La mejora estadística existe pero contradice el concepto de la estrategia. Pendiente: buscar un filtro de calidad basado en la estructura del mercado, no en el resultado previo |
+
+---
+
+## 2026-05-17 — Cambio de riesgo para sesiones futuras
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | PARÁMETRO | **RISK_PCT: 3% → 1% a partir de las próximas sesiones** | Los backtests V6 y V7 con 3% mostraron MaxDD de 44.2% en 2024 — inaceptable para cuenta de fondeo/prop (que típicamente cierra a 10% DD). Con 1%, el MaxDD proporcional sería ~15% en los mismos escenarios. Todos los backtests futuros (V8+) usarán RISK_PCT = 0.01. Los resultados V1–V7 quedan registrados con 3% y no se recalculan retroactivamente |

@@ -183,6 +183,8 @@
     <button class="tab-btn" onclick="showTab('v4')">Backtest V4</button>
     <button class="tab-btn" onclick="showTab('v5')">Backtest V5</button>
     <button class="tab-btn" onclick="showTab('v6')">Backtest V6</button>
+    <button class="tab-btn" onclick="showTab('v7')">Backtest V7</button>
+    <button class="tab-btn" onclick="showTab('trades')">Trades V7</button>
     <button class="tab-btn" onclick="showTab('comparativa')">Comparativa</button>
   </div>
 </nav>
@@ -1005,11 +1007,13 @@
     <div class="kpi"><div class="kpi-label">Capital final 2025</div><div class="kpi-value green">$233.42</div><div class="kpi-sub">inicio $200</div></div>
   </div>
 
-  <div class="chart-grid-2">
-    <div class="chart-box"><h3>Equity 2024</h3><canvas id="eq_v6_2024"></canvas></div>
-    <div class="chart-box"><h3>Equity 2025</h3><canvas id="eq_v6_2025"></canvas></div>
-    <div class="chart-box"><h3>P&L mensual 2024</h3><canvas id="mo_v6_2024"></canvas></div>
-    <div class="chart-box"><h3>P&L mensual 2025</h3><canvas id="mo_v6_2025"></canvas></div>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2024</h3><canvas id="eq_v6_2024" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2024</h3><canvas id="mo_v6_2024" height="180"></canvas></div>
+  </div>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2025</h3><canvas id="eq_v6_2025" height="180"></canvas></div>
+    <div class="panel"><h3>P&L Mensual 2025</h3><canvas id="mo_v6_2025" height="180"></canvas></div>
   </div>
 
   <div class="section">
@@ -1068,10 +1072,170 @@
   </div>
 </div>
 
+<!-- ============================================================ V7 -->
+<div id="v7" class="page">
+  <h1>Backtest V7 — Inducción + Quarters &amp; Magnets + Ventana 08:00-10:00 NY</h1>
+  <p class="subtitle">Señal V1 (inducción) · quarters AND magnets obligatorios · T2 siempre · H4 estricto · Sin filtro noticias · 08:00-10:00 NY · Capital $200 · Riesgo 3%</p>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">P&amp;L 2024</div><div class="kpi-value yellow">+$26.59</div><div class="kpi-sub">78 trades · WR 21.8% · BE 21.8%</div></div>
+    <div class="kpi"><div class="kpi-label">P&amp;L 2025</div><div class="kpi-value green">+$531.21</div><div class="kpi-sub">72 trades · WR 36.1% · BE 20.8%</div></div>
+    <div class="kpi"><div class="kpi-label">MaxDD 2024</div><div class="kpi-value red">44.2%</div><div class="kpi-sub">$200 → $108 en Q1</div></div>
+    <div class="kpi"><div class="kpi-label">MaxDD 2025</div><div class="kpi-value yellow">25.2%</div><div class="kpi-sub">pico $785 → piso $218</div></div>
+    <div class="kpi"><div class="kpi-label">Capital final 2024</div><div class="kpi-value yellow">$226.59</div><div class="kpi-sub">inicio $200</div></div>
+    <div class="kpi"><div class="kpi-label">Capital final 2025</div><div class="kpi-value green">$731.21</div><div class="kpi-sub">inicio $200 · +265%</div></div>
+  </div>
+
+  <h2>Año 2024</h2>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2024</h3><canvas id="eq_v7_2024" height="180"></canvas></div>
+    <div class="panel"><h3>P&amp;L Mensual 2024</h3><canvas id="mo_v7_2024" height="180"></canvas></div>
+  </div>
+
+  <h2>Año 2025</h2>
+  <div class="chart-grid">
+    <div class="panel"><h3>Curva de Capital 2025</h3><canvas id="eq_v7_2025" height="180"></canvas></div>
+    <div class="panel"><h3>P&amp;L Mensual 2025</h3><canvas id="mo_v7_2025" height="180"></canvas></div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="panel">
+      <h3>Sesgo H4 — 2024 vs 2025</h3>
+      <table>
+        <thead><tr><th>H4</th><th>Año</th><th>Trades</th><th>WR</th></tr></thead>
+        <tbody>
+          <tr><td><b>Long</b></td><td>2024</td><td>4</td><td style="color:var(--yellow)">25.0%</td></tr>
+          <tr><td><b>Neutral</b></td><td>2024</td><td>60</td><td style="color:var(--red)">16.7%</td></tr>
+          <tr><td><b>Short</b></td><td>2024</td><td>14</td><td style="color:var(--green)">42.9%</td></tr>
+          <tr style="border-top:1px solid var(--border)"><td><b>Long</b></td><td>2025</td><td>7</td><td style="color:var(--green)">42.9%</td></tr>
+          <tr><td><b>Neutral</b></td><td>2025</td><td>62</td><td style="color:var(--green)">32.3%</td></tr>
+          <tr><td><b>Short</b></td><td>2025</td><td>3</td><td style="color:var(--green)">100.0%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2024</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&amp;L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>48</td><td style="color:var(--red)">16.7%</td><td style="color:var(--red)">−$24.65</td></tr>
+          <tr><td><b>T2</b></td><td>26</td><td style="color:var(--green)">30.8%</td><td style="color:var(--green)">+$51.10</td></tr>
+          <tr><td><b>T3</b></td><td>4</td><td style="color:var(--yellow)">25.0%</td><td style="color:var(--yellow)">+$0.11</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>T1 / T2 / T3 — 2025</h3>
+      <table>
+        <thead><tr><th>Trade</th><th>Nº</th><th>WR</th><th>P&amp;L</th></tr></thead>
+        <tbody>
+          <tr><td><b>T1</b></td><td>36</td><td style="color:var(--green)">33.3%</td><td style="color:var(--green)">+$191.71</td></tr>
+          <tr><td><b>T2</b></td><td>30</td><td style="color:var(--green)">33.3%</td><td style="color:var(--green)">+$204.75</td></tr>
+          <tr><td><b>T3</b></td><td>6</td><td style="color:var(--green)">66.7%</td><td style="color:var(--green)">+$134.76</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight good">
+      <div class="insight-title">V7 2025: mejor resultado histórico</div>
+      <div class="insight-body">+$531.21 (+265%) con MaxDD 25.2%. T1 y T2 con WR idéntico 33.3% — el cambio "T2 siempre" no deterioró la calidad. T3 en 2025: WR 66.7% con 6 trades.</div>
+    </div>
+    <div class="insight bad">
+      <div class="insight-title">V7 2024: MaxDD 44.2% inaceptable</div>
+      <div class="insight-body">Q1 2024: 24 trades sin victorias — capital cayó de $200 a $108. H4 neutral + longs tienen WR 13% en 2024 (vs 37% en 2025). El 44% DD impide uso en cuenta real con límite de 10% DD.</div>
+    </div>
+    <div class="insight info">
+      <div class="insight-title">H4 neutral: el problema central</div>
+      <div class="insight-body">60 de 78 trades en 2024 tienen H4 neutral con WR 16.7% — el mayor volumen con el peor WR. La misma configuración tiene WR 32.3% en 2025 (efecto de la tendencia macro EUR/USD).</div>
+    </div>
+    <div class="insight warn">
+      <div class="insight-title">Asimetría 2024 vs 2025 no resuelta</div>
+      <div class="insight-body">EUR/USD bajista en 2024, alcista en 2025. Un filtro de tendencia macro (MA50 semanal) podría bloquear longs en años bajistas. Pendiente para V8 con RISK_PCT = 1%.</div>
+    </div>
+  </div>
+
+  <hr>
+  <h2 style="margin-bottom:8px">Simulación V7.1 — T2 bloqueado si misma dirección que T1-loss</h2>
+  <p class="subtitle" style="margin-bottom:20px">Análisis retroactivo — <b>no implementado</b>. Todos los T2-after-T1-loss van en la misma dirección que T1 (sin casos opuestos).</p>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">V7.1 P&amp;L 2024</div><div class="kpi-value green">+$59.97</div><div class="kpi-sub">60 trades · WR 23.3%</div></div>
+    <div class="kpi"><div class="kpi-label">V7.1 P&amp;L 2025</div><div class="kpi-value green">+$660.40</div><div class="kpi-sub">56 trades · WR 42.9%</div></div>
+    <div class="kpi"><div class="kpi-label">V7.1 MaxDD 2024</div><div class="kpi-value yellow">36.7%</div><div class="kpi-sub">vs V7 44.2%</div></div>
+    <div class="kpi"><div class="kpi-label">V7.1 MaxDD 2025</div><div class="kpi-value green">14.1%</div><div class="kpi-sub">vs V7 25.2%</div></div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight good">
+      <div class="insight-title">Mejora estadística significativa</div>
+      <div class="insight-body">2024: +$33 adicional, MaxDD −7.5pp. 2025: +$129 adicional, MaxDD −11.1pp, WR sube de 36.1% a 42.9%. La regla elimina los T2 de menor calidad en ambos años.</div>
+    </div>
+    <div class="insight bad">
+      <div class="insight-title">Filosóficamente incorrecta — NO implementada</div>
+      <div class="insight-body">Un setup válido debe operarse independientemente del resultado de T1. El mercado no tiene memoria de nuestras posiciones. La mejora existe pero contradice el concepto de la estrategia. Buscar filtro basado en estructura de mercado, no en resultado previo.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Cambios V7 respecto a V6</h3>
+    <table>
+      <thead><tr><th>Parámetro</th><th>V6</th><th>V7</th></tr></thead>
+      <tbody>
+        <tr><td>Confirmaciones</td><td>Mín. 2 de 3 (div, quarters, magnets)</td><td><b>quarters AND magnets obligatorios</b></td></tr>
+        <tr><td>Ventana operativa</td><td>09:30–13:00 NY</td><td><b>08:00–10:00 NY</b></td></tr>
+        <tr><td>T2</td><td>Solo si T1 ganó</td><td><b>Siempre (independiente de T1)</b></td></tr>
+        <tr><td>T3 gate</td><td>Excellence condition (body mult)</td><td><b>T2 win + divergencia si T1 perdió</b></td></tr>
+        <tr><td>Filtro H4</td><td>Combined H4+H1</td><td><b>Solo h4_bias (estricto)</b></td></tr>
+        <tr><td>Filtro noticias</td><td>±60 min NFP/ECB/CPI</td><td><b>Eliminado</b></td></tr>
+        <tr><td>CAPITAL / RISK_PCT</td><td>$200 / 3%</td><td>$200 / 3% (V8+ usará 1%)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ TRADES V7 -->
+<div id="trades" class="page">
+  <h1>Trades V7 — Visualización de Señales</h1>
+  <p class="subtitle">150 trades de V7 (78 en 2024 + 72 en 2025) — fecha, entrada, SL, TP, resultado. Para revisar señal por señal.</p>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Total trades</div><div class="kpi-value blue">150</div><div class="kpi-sub">78 en 2024 · 72 en 2025</div></div>
+    <div class="kpi"><div class="kpi-label">Wins</div><div class="kpi-value green">43</div><div class="kpi-sub">28.7% WR combinado</div></div>
+    <div class="kpi"><div class="kpi-label">Break-even</div><div class="kpi-value blue">32</div><div class="kpi-sub">21.3% — capital protegido</div></div>
+    <div class="kpi"><div class="kpi-label">Losses</div><div class="kpi-value red">75</div><div class="kpi-sub">50.0%</div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:20px">
+    <h3>Precio de entrada por trade — 2024 (verde=win · rojo=loss · amarillo=BE)</h3>
+    <canvas id="scatter_trades_2024" height="150"></canvas>
+  </div>
+  <div class="panel" style="margin-bottom:20px">
+    <h3>Precio de entrada por trade — 2025 (verde=win · rojo=loss · amarillo=BE)</h3>
+    <canvas id="scatter_trades_2025" height="150"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>Todos los trades V7 (2024 + 2025)</h3>
+    <div style="overflow-x:auto; max-height:620px; overflow-y:auto;">
+      <table>
+        <thead style="position:sticky;top:0;background:var(--surface);z-index:1">
+          <tr>
+            <th>#</th><th>Fecha</th><th>Dir</th><th>Ciclo</th><th>H4</th>
+            <th>Entrada</th><th>SL</th><th>TP</th><th>Resultado</th><th>P&amp;L</th><th>T#</th>
+          </tr>
+        </thead>
+        <tbody id="trades_tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================ COMPARATIVA -->
 <div id="comparativa" class="page">
-  <h1>Comparativa V1 → V6</h1>
-  <p class="subtitle">Inducción clásica · Barrido de niveles · HTF + Break-Even · Niveles probados + HTF veto + BE · Sweep+EQH/EQL · Inducción + Controles V4</p>
+  <h1>Comparativa V1 → V7</h1>
+  <p class="subtitle">Inducción clásica · Barrido de niveles · HTF + BE · Niveles probados · Sweep+EQH/EQL · Inducción+Controles · Inducción+Quarters&amp;Magnets+08-10NY</p>
 
   <div class="chart-grid-2">
     <div class="panel">
@@ -1081,6 +1245,16 @@
     <div class="panel">
       <h3>V1 vs V2 vs V3 — 2025 ($1,000 base)</h3>
       <canvas id="eq_cmp_2025" height="200"></canvas>
+    </div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="panel">
+      <h3>V4 vs V6 vs V7 — 2024 ($200 base)</h3>
+      <canvas id="eq_cmp_v4v6v7_2024" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>V4 vs V6 vs V7 — 2025 ($200 base)</h3>
+      <canvas id="eq_cmp_v4v6v7_2025" height="200"></canvas>
     </div>
   </div>
   <div class="chart-grid-2">
@@ -1095,84 +1269,73 @@
   </div>
 
   <div class="panel section-gap">
-    <h3>Métricas clave — V1 vs V2 vs V3 vs V4 vs V5 (V6 en pestaña propia)</h3>
-    <p style="color:var(--muted);font-size:11px;margin-bottom:12px">V1–V3: capital $1,000 / riesgo 1% · V4–V5: capital $200 / riesgo 3% (con filtro de noticias) · V6 ver pestaña Backtest V6</p>
+    <h3>Métricas clave — V4 vs V6 vs V7 (capital $200 / riesgo 3%)</h3>
+    <p style="color:var(--muted);font-size:11px;margin-bottom:12px">V1–V3: capital $1,000 / riesgo 1% (ver pestañas individuales) · V4–V7: capital $200 / riesgo 3% · A partir de V8: RISK_PCT = 1%</p>
     <table class="compare-table">
       <thead>
         <tr>
           <th>Métrica</th>
-          <th>V1 · 24</th>
-          <th>V2 · 24</th>
-          <th>V3 · 24</th>
-          <th class="highlight-col">V4 · 24</th>
-          <th style="color:var(--purple)">V5 · 24</th>
-          <th>V1 · 25</th>
-          <th>V2 · 25</th>
-          <th>V3 · 25</th>
-          <th class="highlight-col">V4 · 25</th>
-          <th style="color:var(--purple)">V5 · 25</th>
+          <th>V4 · 24</th>
+          <th>V6 · 24</th>
+          <th class="highlight-col">V7 · 24</th>
+          <th>V4 · 25</th>
+          <th>V6 · 25</th>
+          <th class="highlight-col">V7 · 25</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><b>Trades</b></td>
-          <td>253</td><td>73</td><td>51</td>
-          <td class="highlight-col blue">27</td>
-          <td style="color:var(--purple)">28</td>
-          <td>252</td><td>52</td><td>54</td>
-          <td class="highlight-col blue">23</td>
-          <td style="color:var(--purple)">23</td>
+          <td>27</td><td>105</td>
+          <td class="highlight-col blue">78</td>
+          <td>24</td><td>100</td>
+          <td class="highlight-col blue">72</td>
         </tr>
         <tr>
           <td><b>WR total</b></td>
-          <td>29.6%</td><td>30.1%</td><td>21.6%</td>
-          <td class="highlight-col yellow">18.5%</td>
-          <td style="color:var(--red)">14.3%</td>
-          <td>38.5%</td><td>38.5%</td><td>35.2%</td>
-          <td class="highlight-col winner green">47.8% ↑</td>
-          <td style="color:var(--red)">21.7%</td>
+          <td style="color:var(--red)">18.5%</td><td>23.8%</td>
+          <td class="highlight-col yellow">21.8%</td>
+          <td class="winner green">45.8%</td><td>23.0%</td>
+          <td class="highlight-col winner green">36.1% ↑</td>
         </tr>
         <tr>
-          <td><b>WR efectivo</b></td>
-          <td>—</td><td>—</td><td>26.2%</td>
-          <td class="highlight-col green">26.3%</td>
-          <td style="color:var(--red)">19.0%</td>
-          <td>—</td><td>—</td><td>47.5%</td>
-          <td class="highlight-col winner green">57.9% ↑</td>
-          <td style="color:var(--muted)">~26%</td>
+          <td><b>BE rate</b></td>
+          <td>29.6%</td><td>19.0%</td>
+          <td class="highlight-col">21.8%</td>
+          <td>16.7%</td><td>18.0%</td>
+          <td class="highlight-col">20.8%</td>
+        </tr>
+        <tr>
+          <td><b>P&amp;L ($)</b></td>
+          <td>+$0.89</td><td class="green">+$77.33</td>
+          <td class="highlight-col yellow">+$26.59</td>
+          <td class="green">+$192.34</td><td>+$33.42</td>
+          <td class="highlight-col winner green">+$531.21 ↑</td>
         </tr>
         <tr>
           <td><b>Retorno %</b></td>
-          <td class="winner green">+53.4%</td><td>+14.8%</td><td>+1.4%</td>
-          <td class="highlight-col yellow">+0.4%</td>
-          <td style="color:var(--red)">−15.9%</td>
-          <td class="winner green">+270%</td><td>+30.9%</td><td>+42%</td>
-          <td class="highlight-col winner green">+102.2% ↑</td>
-          <td style="color:var(--yellow)">+10.1%</td>
+          <td>+0.4%</td><td class="green">+38.7%</td>
+          <td class="highlight-col yellow">+13.3%</td>
+          <td class="green">+96.2%</td><td>+16.7%</td>
+          <td class="highlight-col winner green">+265.6% ↑</td>
         </tr>
         <tr>
           <td><b>MaxDD</b></td>
-          <td style="color:var(--red)">28.9%</td>
-          <td style="color:var(--yellow)">9.7%</td>
-          <td style="color:var(--yellow)">13.2%</td>
-          <td class="highlight-col" style="color:var(--red)">17.1%</td>
-          <td style="color:var(--red)">26.3%</td>
-          <td style="color:var(--yellow)">13.1%</td>
-          <td style="color:var(--green)">4.9%</td>
-          <td style="color:var(--yellow)">8.6%</td>
-          <td class="highlight-col winner green">8.7% ↓</td>
-          <td style="color:var(--yellow)">11.5%</td>
+          <td style="color:var(--red)">17.1%</td>
+          <td style="color:var(--red)">28.8%</td>
+          <td class="highlight-col" style="color:var(--red)">44.2%</td>
+          <td style="color:var(--yellow)">8.7%</td>
+          <td style="color:var(--red)">44.2%</td>
+          <td class="highlight-col" style="color:var(--yellow)">25.2%</td>
         </tr>
         <tr>
           <td><b>Señal</b></td>
-          <td colspan="2" style="color:var(--muted);font-size:11px">Inducción M1</td>
-          <td style="color:var(--muted);font-size:11px">Ind.+HTF</td>
-          <td class="highlight-col" style="color:var(--orange);font-size:11px">Sweep+2 niveles+BE</td>
-          <td style="color:var(--purple);font-size:11px">Sweep+EQH/EQL</td>
-          <td colspan="2" style="color:var(--muted);font-size:11px">Sweep niveles</td>
-          <td style="color:var(--muted);font-size:11px">Ind.+HTF</td>
-          <td class="highlight-col" style="color:var(--orange);font-size:11px">Sweep+2 niveles+BE</td>
-          <td style="color:var(--purple);font-size:11px">Sweep+EQH/EQL</td>
+          <td style="color:var(--orange);font-size:11px">Sweep 2 niveles</td>
+          <td style="color:var(--muted);font-size:11px">Ind.+09:30-13NY</td>
+          <td class="highlight-col" style="color:var(--green);font-size:11px">Ind.+Q&amp;M+08-10NY</td>
+          <td style="color:var(--orange);font-size:11px">Sweep 2 niveles</td>
+          <td style="color:var(--muted);font-size:11px">Ind.+09:30-13NY</td>
+          <td class="highlight-col" style="color:var(--green);font-size:11px">Ind.+Q&amp;M+08-10NY</td>
         </tr>
       </tbody>
     </table>
@@ -1244,8 +1407,15 @@ const D = {
   v5_2024: {"equity":[200.0,194.0,188.18,182.53,198.96,192.99,192.99,187.2,187.2,181.59,176.14,191.99,209.27,228.11,221.26,214.63,214.63,214.63,208.19,201.94,201.94,201.94,195.88,190.01,184.31,178.78,178.78,173.41,168.21],"monthly":{"2024-01":-11.82,"2024-02":-5.65,"2024-04":4.67,"2024-07":-11.07,"2024-08":51.96,"2024-09":-13.48,"2024-10":-18.75,"2024-11":-11.58,"2024-12":-16.09},"cycles":{"Normal":{trades:27,wr:14.8,pnl:-24.95},"Sierra":{trades:1,wr:0,pnl:-6.84}},"htf":{"long":{trades:5,wr:20.0,pnl:2.38},"neutral":{trades:11,wr:0.0,pnl:-45.38},"short":{trades:12,wr:25.0,pnl:11.21}},"bes":7},
   v5_2025: {"equity":[200.0,194.0,188.18,182.53,177.06,192.99,210.36,210.36,204.05,222.42,222.42,222.42,215.74,209.27,228.11,228.11,228.11,248.64,241.18,241.18,233.94,226.92,226.92,220.12],"monthly":{"2025-01":-11.82,"2025-03":22.18,"2025-04":12.05,"2025-06":5.69,"2025-08":13.07,"2025-09":-7.24,"2025-10":-13.83},"cycles":{"Normal":{trades:23,wr:21.7,pnl:20.12}},"htf":{"long":{trades:8,wr:25.0,pnl:8.11},"neutral":{trades:9,wr:11.1,pnl:-18.46},"short":{trades:6,wr:33.3,pnl:30.47}},"bes":7},
   v6_2024: {"equity":[200.0,194.0,188.18,182.53,177.06,171.75,166.59,161.6,161.6,156.75,170.86,186.23,180.65,175.23,191.0,191.0,185.27,179.71,174.32,169.09,169.09,169.09,164.02,159.1,154.32,149.69,145.2,158.27,158.27,172.51,167.34,162.32,176.93,176.93,192.85,210.21,203.9,197.78,191.85,209.12,202.84,196.76,196.76,196.76,190.86,185.13,179.58,174.19,174.19,168.96,163.89,158.98,173.29,173.29,168.09,183.21,199.7,217.68,237.27,258.62,250.86,250.86,243.34,265.24,257.28,280.44,272.02,272.02,272.02,263.86,255.95,278.98,270.61,294.97,321.51,311.87,302.51,302.51,293.44,284.63,276.1,267.81,259.78,283.16,274.66,266.42,266.42,258.43,250.68,243.16,235.86,228.79,228.79,228.79,249.38,249.38,249.38,241.9,263.67,255.76,278.78,303.87,294.75,285.91,277.33,277.33],"monthly":{"2024-01":-13.77,"2024-02":-11.92,"2024-03":-19.99,"2024-04":55.88,"2024-05":-13.45,"2024-06":-22.57,"2024-07":43.48,"2024-08":38.26,"2024-09":37.49,"2024-10":-57.55,"2024-11":6.03,"2024-12":35.43},"htf":{"long":{trades:26,wr:23.1},"neutral":{trades:56,wr:21.4},"short":{trades:23,wr:30.4}},"bes":20},
-  v6_2025: {"equity":[200.0,218.0,237.62,259.01,282.32,307.72,298.49,289.54,280.85,272.43,296.94,323.67,313.96,304.54,331.95,361.83,350.97,340.44,340.44,330.23,320.32,310.71,338.68,369.16,358.08,347.34,347.34,336.92,326.81,317.01,307.5,335.17,335.17,325.12,315.36,305.9,305.9,296.73,287.82,279.19,270.81,262.69,286.33,312.1,302.74,293.66,284.85,284.85,276.3,268.01,268.01,259.97,252.17,252.17,274.87,266.62,290.62,290.62,281.9,273.44,298.05,324.88,315.13,343.49,343.49,333.19,363.17,395.86,383.98,372.46,361.29,361.29,350.45,339.94,329.74,329.74,319.85,319.85,319.85,319.85,310.25,300.94,291.92,283.16,274.66,266.42,258.43,250.68,243.16,235.86,228.79,221.92,241.9,234.64,227.6,220.77,240.64,240.64,240.64,240.64,233.42],"monthly":{"2025-01":123.68,"2025-02":6.57,"2025-03":-3.42,"2025-04":-30.09,"2025-05":-17.53,"2025-06":32.91,"2025-07":-45.48,"2025-08":76.86,"2025-09":28.98,"2025-10":-52.61,"2025-11":-45.19,"2025-12":-41.24},"htf":{"long":{trades:36,wr:22.2},"neutral":{trades:44,wr:22.7},"short":{trades:20,wr:25.0}},"bes":17}
+  v6_2025: {"equity":[200.0,218.0,237.62,259.01,282.32,307.72,298.49,289.54,280.85,272.43,296.94,323.67,313.96,304.54,331.95,361.83,350.97,340.44,340.44,330.23,320.32,310.71,338.68,369.16,358.08,347.34,347.34,336.92,326.81,317.01,307.5,335.17,335.17,325.12,315.36,305.9,305.9,296.73,287.82,279.19,270.81,262.69,286.33,312.1,302.74,293.66,284.85,284.85,276.3,268.01,268.01,259.97,252.17,252.17,274.87,266.62,290.62,290.62,281.9,273.44,298.05,324.88,315.13,343.49,343.49,333.19,363.17,395.86,383.98,372.46,361.29,361.29,350.45,339.94,329.74,329.74,319.85,319.85,319.85,319.85,310.25,300.94,291.92,283.16,274.66,266.42,258.43,250.68,243.16,235.86,228.79,221.92,241.9,234.64,227.6,220.77,240.64,240.64,240.64,240.64,233.42],"monthly":{"2025-01":123.68,"2025-02":6.57,"2025-03":-3.42,"2025-04":-30.09,"2025-05":-17.53,"2025-06":32.91,"2025-07":-45.48,"2025-08":76.86,"2025-09":28.98,"2025-10":-52.61,"2025-11":-45.19,"2025-12":-41.24},"htf":{"long":{trades:36,wr:22.2},"neutral":{trades:44,wr:22.7},"short":{trades:20,wr:25.0}},"bes":17},
+  v7_2024: {"equity":[200,194.0,194.0,188.18,182.53,182.53,177.06,171.75,171.75,171.75,166.59,161.6,156.75,152.05,147.48,143.06,138.77,134.61,130.57,130.57,126.65,122.85,119.17,115.59,115.59,112.12,122.21,118.55,114.99,111.54,108.19,108.19,108.19,117.93,117.93,128.55,124.69,120.95,117.32,127.88,139.39,151.93,165.61,180.51,175.1,190.86,208.03,201.79,195.74,189.87,184.17,184.17,184.17,178.64,194.72,188.88,205.88,205.88,199.7,193.71,211.15,211.15,230.15,223.25,223.25,216.55,236.04,228.96,222.09,222.09,242.08,234.81,227.77,220.94,220.94,214.31,214.31,233.6,226.59],"monthly":{"2024-01":-28.26,"2024-02":-28.68,"2024-03":-27.47,"2024-04":6.62,"2024-05":-4.29,"2024-07":33.99,"2024-08":53.94,"2024-09":24.26,"2024-10":-8.06,"2024-12":4.51},"h4":{"long":{trades:4,wr:25.0},"neutral":{trades:60,wr:16.7},"short":{trades:14,wr:42.9}},"t123":{"T1":{trades:48,wr:16.7,pnl:-24.65},"T2":{trades:26,wr:30.8,pnl:51.10},"T3":{trades:4,wr:25.0,pnl:0.11}}},
+  v7_2025: {"equity":[200,218.0,237.62,259.01,251.24,273.85,298.49,325.36,354.64,386.56,421.35,459.27,459.27,445.49,432.13,419.16,406.59,394.39,429.88,429.88,416.99,404.48,392.34,380.57,414.83,414.83,414.83,402.38,390.31,378.6,367.24,356.22,356.22,345.54,345.54,376.64,376.64,376.64,365.34,354.38,343.75,374.68,408.4,408.4,445.16,485.23,485.23,485.23,470.67,470.67,513.03,559.2,542.43,591.24,644.46,625.12,606.37,660.94,720.43,785.26,761.71,761.71,761.71,761.71,738.86,716.69,695.19,757.76,735.02,712.97,691.58,670.84,731.21],"monthly":{"2025-01":154.64,"2025-02":104.63,"2025-03":-54.78,"2025-04":10.35,"2025-05":-24.51,"2025-06":-34.09,"2025-07":129.0,"2025-08":73.97,"2025-09":-16.78,"2025-10":219.28,"2025-11":-3.95,"2025-12":-26.54},"h4":{"long":{trades:7,wr:42.9},"neutral":{trades:62,wr:32.3},"short":{trades:3,wr:100.0}},"t123":{"T1":{trades:36,wr:33.3,pnl:191.71},"T2":{trades:30,wr:33.3,pnl:204.75},"T3":{trades:6,wr:66.7,pnl:134.76}}}
 };
+
+// ============================================================ TRADES DATA
+// [date, dir, cycle, h4, entry, sl, tp, result, pnl, num_day]
+const TV24=[["2024-01-03","L","N","n",1.09183,1.09125,1.09357,"l",-6.0,1],["2024-01-03","L","N","n",1.09201,1.09081,1.09561,"b",0.0,2],["2024-01-08","S","N","n",1.09532,1.09581,1.09385,"l",-5.82,1],["2024-01-08","S","N","n",1.09518,1.09581,1.09329,"l",-5.65,2],["2024-01-11","S","N","n",1.09869,1.09928,1.09692,"b",0.0,1],["2024-01-29","L","N","n",1.08185,1.08118,1.08386,"l",-5.48,1],["2024-01-29","L","N","n",1.08203,1.08118,1.08458,"l",-5.31,2],["2024-01-30","S","N","s",1.0845,1.08519,1.08243,"b",0.0,1],["2024-01-30","S","N","s",1.08458,1.08519,1.08275,"b",0.0,2],["2024-02-02","L","N","n",1.08126,1.08068,1.083,"l",-5.15,1],["2024-02-02","L","N","n",1.08028,1.07896,1.08424,"l",-5.0,2],["2024-02-05","L","N","n",1.07395,1.07332,1.07584,"l",-4.85,1],["2024-02-09","S","N","n",1.07865,1.07971,1.07547,"l",-4.7,1],["2024-02-09","S","N","n",1.07836,1.07971,1.07431,"l",-4.56,2],["2024-02-22","L","N","n",1.08165,1.08104,1.08348,"l",-4.42,1],["2024-03-07","L","N","l",1.08798,1.087,1.09092,"l",-4.29,1],["2024-03-07","L","N","l",1.08818,1.087,1.09172,"l",-4.16,2],["2024-03-11","L","N","n",1.09191,1.09157,1.09293,"l",-4.04,1],["2024-03-11","L","N","n",1.09203,1.09141,1.09389,"b",0.0,2],["2024-03-13","S","N","s",1.09373,1.09429,1.09205,"l",-3.92,1],["2024-03-13","S","N","s",1.09399,1.09463,1.09207,"l",-3.8,2],["2024-03-26","L","N","n",1.08424,1.08359,1.08619,"l",-3.69,1],["2024-03-26","L","N","n",1.08437,1.08359,1.08671,"l",-3.57,2],["2024-03-27","L","N","n",1.08149,1.08088,1.08332,"b",0.0,1],["2024-04-09","S","N","s",1.08677,1.08706,1.0859,"l",-3.47,1],["2024-04-09","S","N","s",1.08794,1.08859,1.08599,"w",10.09,2],["2024-05-01","S","N","n",1.06759,1.06819,1.06579,"l",-3.67,1],["2024-05-02","L","N","n",1.07004,1.06938,1.07202,"l",-3.56,1],["2024-05-02","L","N","n",1.06966,1.06898,1.0717,"l",-3.45,2],["2024-05-08","S","Si","n",1.07507,1.07555,1.07363,"l",-3.35,1],["2024-05-10","L","N","n",1.07711,1.07642,1.07918,"b",0.0,1],["2024-05-23","S","N","s",1.08563,1.08622,1.08386,"b",0.0,1],["2024-05-23","S","N","s",1.08593,1.08622,1.08506,"w",9.74,2],["2024-05-23","S","N","s",1.08579,1.08622,1.0845,"b",0.0,3],["2024-07-01","L","N","n",1.07429,1.07385,1.07561,"w",10.61,1],["2024-07-12","S","N","n",1.08931,1.08998,1.0873,"l",-3.86,1],["2024-07-26","S","N","n",1.08598,1.08649,1.08445,"l",-3.74,1],["2024-07-26","S","N","n",1.08613,1.08674,1.0843,"l",-3.63,2],["2024-07-31","S","N","s",1.08393,1.08499,1.08075,"w",10.56,1],["2024-07-31","S","N","s",1.08461,1.08513,1.08305,"w",11.51,2],["2024-07-31","S","N","s",1.08447,1.08513,1.08249,"w",12.54,3],["2024-08-05","S","N","n",1.09928,1.10052,1.09556,"w",13.67,1],["2024-08-05","S","N","n",1.09921,1.10052,1.09528,"w",14.9,2],["2024-08-05","S","N","n",1.09896,1.10052,1.09428,"l",-5.42,3],["2024-08-09","L","N","n",1.09129,1.09076,1.09288,"w",15.76,1],["2024-08-09","L","N","n",1.09125,1.09076,1.09272,"w",17.18,2],["2024-08-13","S","N","n",1.09417,1.09485,1.09213,"l",-6.24,1],["2024-08-15","L","N","n",1.09565,1.09498,1.09766,"l",-6.05,1],["2024-08-15","L","N","n",1.09581,1.09498,1.0983,"l",-5.87,2],["2024-08-20","S","N","n",1.10996,1.11071,1.10771,"l",-5.7,1],["2024-08-22","L","N","n",1.11299,1.11233,1.11497,"b",0.0,1],["2024-08-22","L","N","n",1.11312,1.11233,1.11549,"b",0.0,2],["2024-08-23","L","N","n",1.11098,1.11069,1.11185,"l",-5.53,1],["2024-08-23","L","N","n",1.11092,1.11045,1.11233,"w",16.08,2],["2024-08-27","L","N","n",1.11638,1.11574,1.1183,"l",-5.84,1],["2024-08-27","L","N","n",1.11576,1.11481,1.11861,"w",17.0,2],["2024-08-30","L","N","n",1.10621,1.10518,1.1093,"b",0.0,1],["2024-09-17","L","N","n",1.112,1.11131,1.11407,"l",-6.18,1],["2024-09-17","L","N","n",1.11269,1.11131,1.11683,"l",-5.99,2],["2024-09-26","S","N","n",1.11624,1.11674,1.11474,"w",17.43,1],["2024-09-26","S","N","n",1.11604,1.11674,1.11394,"b",0.0,2],["2024-09-27","S","N","n",1.11944,1.1205,1.11626,"w",19.0,1],["2024-10-02","L","N","n",1.10516,1.1045,1.10714,"l",-6.9,1],["2024-10-07","S","N","s",1.09803,1.09856,1.09644,"b",0.0,1],["2024-10-08","L","N","l",1.09759,1.09694,1.09954,"l",-6.7,1],["2024-10-15","S","N","s",1.09131,1.09187,1.08963,"w",19.49,1],["2024-10-22","L","N","n",1.082,1.08129,1.08413,"l",-7.08,1],["2024-10-22","L","N","n",1.08159,1.08111,1.08303,"l",-6.87,2],["2024-11-29","L","N","n",1.05519,1.0546,1.05696,"b",0.0,1],["2024-12-04","L","N","l",1.04922,1.04823,1.05219,"w",19.99,1],["2024-12-12","L","N","n",1.04903,1.04845,1.05077,"l",-7.26,1],["2024-12-16","L","N","n",1.04885,1.0483,1.0505,"l",-7.04,1],["2024-12-16","L","N","n",1.04887,1.0483,1.05058,"l",-6.83,2],["2024-12-18","L","N","n",1.0488,1.04805,1.05105,"b",0.0,1],["2024-12-26","S","N","n",1.03994,1.04077,1.03745,"l",-6.63,1],["2024-12-27","S","N","n",1.04336,1.044,1.04144,"b",0.0,1],["2024-12-27","S","N","n",1.04342,1.044,1.04168,"w",19.29,2],["2024-12-27","S","N","n",1.04335,1.04389,1.04173,"l",-7.01,3]];
+const TV25=[["2025-01-15","S","N","s",1.03377,1.03472,1.03092,"w",18.0,1],["2025-01-15","S","N","s",1.03333,1.03472,1.02916,"w",19.62,2],["2025-01-15","S","N","s",1.03315,1.03409,1.03033,"w",21.39,3],["2025-01-16","L","N","n",1.0269,1.02607,1.02939,"l",-7.77,1],["2025-01-16","L","N","n",1.02712,1.02658,1.02874,"w",22.61,2],["2025-01-27","S","N","n",1.05193,1.0535,1.04722,"w",24.65,1],["2025-01-27","S","N","n",1.05239,1.05307,1.05035,"w",26.86,2],["2025-01-27","S","N","n",1.05198,1.05307,1.04871,"w",29.28,3],["2025-02-13","L","N","n",1.03883,1.03798,1.04138,"w",31.92,1],["2025-02-13","L","N","n",1.03895,1.03798,1.04186,"w",34.79,2],["2025-02-13","L","N","n",1.03872,1.03812,1.04052,"w",37.92,3],["2025-03-03","S","N","n",1.04735,1.04782,1.04594,"b",0.0,1],["2025-03-03","S","N","n",1.04718,1.04782,1.04526,"l",-13.78,2],["2025-03-06","S","N","n",1.08213,1.08393,1.07673,"l",-13.36,1],["2025-03-06","S","N","n",1.0824,1.08429,1.07673,"l",-12.96,2],["2025-03-17","S","N","n",1.08991,1.0906,1.08784,"l",-12.57,1],["2025-03-17","S","N","n",1.09019,1.09083,1.08827,"l",-12.2,2],["2025-03-26","L","N","l",1.07729,1.07655,1.07951,"w",35.5,1],["2025-03-26","L","N","l",1.07761,1.07655,1.08079,"b",0.0,2],["2025-03-31","L","N","l",1.08169,1.081,1.08376,"l",-12.9,1],["2025-03-31","L","N","l",1.0819,1.081,1.0846,"l",-12.51,2],["2025-04-02","S","N","n",1.08063,1.08134,1.0785,"l",-12.13,1],["2025-04-02","S","N","n",1.08107,1.08169,1.07921,"l",-11.77,2],["2025-04-14","L","N","n",1.13083,1.1296,1.13452,"w",34.25,1],["2025-04-15","L","N","n",1.13137,1.13039,1.13431,"b",0.0,1],["2025-04-15","L","N","n",1.13128,1.13031,1.13419,"b",0.0,2],["2025-05-16","L","N","n",1.11951,1.11881,1.12161,"l",-12.44,1],["2025-05-16","L","N","n",1.11944,1.11859,1.12199,"l",-12.07,2],["2025-06-10","S","N","n",1.14308,1.14402,1.14026,"l",-11.71,1],["2025-06-10","S","N","n",1.14324,1.14402,1.1409,"l",-11.36,2],["2025-06-30","L","N","n",1.17176,1.17097,1.17413,"l",-11.02,1],["2025-06-30","L","N","n",1.17123,1.17071,1.17279,"b",0.0,2],["2025-07-08","L","N","n",1.17183,1.17118,1.17378,"l",-10.69,1],["2025-07-08","L","N","n",1.17167,1.17118,1.17314,"b",0.0,2],["2025-07-09","L","N","n",1.17,1.16875,1.17375,"w",31.1,1],["2025-07-15","L","N","n",1.16671,1.16627,1.16803,"b",0.0,1],["2025-07-15","L","N","n",1.16681,1.16627,1.16843,"b",0.0,2],["2025-07-16","L","N","n",1.16055,1.15988,1.16256,"l",-11.3,1],["2025-07-16","L","N","n",1.16019,1.15908,1.16352,"l",-10.96,2],["2025-07-23","L","N","n",1.17249,1.17131,1.17603,"l",-10.63,1],["2025-07-24","L","N","n",1.17388,1.173,1.17652,"w",30.94,1],["2025-07-24","L","N","n",1.17377,1.17283,1.17659,"w",33.72,2],["2025-07-24","L","N","n",1.17449,1.17283,1.17947,"b",0.0,3],["2025-07-31","L","N","n",1.1413,1.14053,1.14361,"w",36.76,1],["2025-07-31","L","N","n",1.14138,1.14053,1.14393,"w",40.06,2],["2025-07-31","L","N","n",1.1408,1.14038,1.14206,"b",0.0,3],["2025-08-28","S","N","n",1.16719,1.16784,1.16524,"b",0.0,1],["2025-08-28","S","N","n",1.16733,1.16889,1.16265,"l",-14.56,2],["2025-08-29","L","N","l",1.16574,1.16515,1.16751,"b",0.0,1],["2025-08-29","L","N","l",1.16598,1.16515,1.16847,"w",42.36,2],["2025-08-29","L","N","l",1.16619,1.16515,1.16931,"w",46.17,3],["2025-09-18","L","N","n",1.17852,1.178,1.18008,"l",-16.78,1],["2025-10-02","S","N","n",1.17532,1.17603,1.17319,"w",48.82,1],["2025-10-02","S","N","n",1.17542,1.17603,1.17359,"w",53.21,2],["2025-10-17","L","N","n",1.16838,1.16782,1.17006,"l",-19.33,1],["2025-10-17","L","N","n",1.16823,1.16782,1.16946,"l",-18.75,2],["2025-10-22","L","N","n",1.15822,1.15747,1.16047,"w",54.57,1],["2025-10-23","L","N","n",1.15892,1.15843,1.16039,"w",59.48,1],["2025-10-23","L","N","n",1.15906,1.15845,1.16089,"w",64.84,2],["2025-10-24","S","N","n",1.16338,1.16453,1.15993,"l",-23.56,1],["2025-10-24","S","N","n",1.16319,1.16387,1.16115,"b",0.0,2],["2025-11-03","L","N","n",1.15103,1.15037,1.15301,"b",0.0,1],["2025-11-03","L","N","n",1.15089,1.15041,1.15233,"b",0.0,2],["2025-11-07","S","N","n",1.15745,1.15807,1.15559,"l",-22.85,1],["2025-11-07","S","N","n",1.15727,1.15807,1.15487,"l",-22.17,2],["2025-11-26","L","Si","n",1.15583,1.15515,1.15787,"l",-21.5,1],["2025-11-26","L","Si","n",1.15551,1.1545,1.15854,"w",62.57,2],["2025-12-09","L","N","n",1.16342,1.16284,1.16516,"l",-22.73,1],["2025-12-09","L","N","n",1.16349,1.16259,1.16619,"l",-22.05,2],["2025-12-17","S","Si","n",1.17253,1.17347,1.16971,"l",-21.39,1],["2025-12-17","S","Si","n",1.17244,1.17347,1.16935,"l",-20.75,2],["2025-12-31","S","N","n",1.17564,1.17612,1.1742,"w",60.38,1]];
 
 // ============================================================ CHART HELPERS
 const BREAK_EVEN = 25;
@@ -1528,60 +1698,170 @@ function levelsCmpChart(id) {
   });
 }
 
-// ============================================================ INIT CHARTS
-window.addEventListener('DOMContentLoaded', () => {
-  // V1
-  eqChart('eq_v1_2024', D.v1_2024.equity, '#58a6ff');
-  eqChart('eq_v1_2025', D.v1_2025.equity, '#3fb950');
-  monthlyChart('mo_v1_2024', D.v1_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v1_2025', D.v1_2025.monthly, 'P&L 2025');
-  cycleChart('cyc_v1', D.v1_2024.cycles, D.v1_2025.cycles);
+function compareV4V6V7(id, v4, v6, v7, yr) {
+  const max = Math.max(v4.length, v6.length, v7.length);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array.from({length: max}, (_, i) => i),
+      datasets: [
+        { label: `V4 ${yr}`, data: v4, borderColor: '#ffa657', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.1 },
+        { label: `V6 ${yr}`, data: v6, borderColor: '#39d353', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.1 },
+        { label: `V7 ${yr}`, data: v7, borderColor: '#58a6ff', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.1 },
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 8 } } },
+      scales: {
+        x: { display: false },
+        y: { grid: { color: '#30363d55' }, ticks: { callback: v => '$'+Math.round(v).toLocaleString() } }
+      }
+    }
+  });
+}
 
-  // V2
-  eqChart('eq_v2_2024', D.v2_2024.equity, '#58a6ff');
-  eqChart('eq_v2_2025', D.v2_2025.equity, '#3fb950');
-  monthlyChart('mo_v2_2024', D.v2_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v2_2025', D.v2_2025.monthly, 'P&L 2025');
-  cycleChart('cyc_v2', D.v2_2024.cycles, D.v2_2025.cycles);
-  levelsWrChart('levels_chart');
-  levelsPnlChart('levels_pnl');
+function scatterTrades(id, trades) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  const pd = s => { const [y,m,d] = s.split('-'); return Date.UTC(+y,+m-1,+d); };
+  const wins = trades.filter(t => t[7]==='w');
+  const bes  = trades.filter(t => t[7]==='b');
+  const loss = trades.filter(t => t[7]==='l');
+  const tp = t => ({ x: pd(t[0]), y: t[8], raw: t });
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Win',  data: wins.map(tp), backgroundColor: '#3fb950', pointRadius: 5, pointHoverRadius: 7 },
+        { label: 'BE',   data: bes.map(tp),  backgroundColor: '#d29922', pointRadius: 4, pointHoverRadius: 6 },
+        { label: 'Loss', data: loss.map(tp), backgroundColor: '#f85149', pointRadius: 5, pointHoverRadius: 7 },
+      ]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 10, padding: 8 } },
+        tooltip: {
+          callbacks: {
+            label: item => {
+              const t = item.raw.raw;
+              const res = t[7]==='w' ? 'WIN' : t[7]==='b' ? 'BE' : 'LOSS';
+              return `${t[0]} · ${t[1]==='L'?'LONG':'SHORT'} · T${t[9]} · ${res} · $${t[8].toFixed(2)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => months[new Date(v).getUTCMonth()], maxTicksLimit: 12 }
+        },
+        y: {
+          grid: { color: '#30363d55' },
+          ticks: { callback: v => '$'+v.toFixed(0) }
+        }
+      }
+    }
+  });
+}
 
-  // V3
-  eqChart('eq_v3_2024', D.v3_2024.equity, '#bc8cff');
-  eqChart('eq_v3_2025', D.v3_2025.equity, '#ffa657');
-  monthlyChart('mo_v3_2024', D.v3_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v3_2025', D.v3_2025.monthly, 'P&L 2025');
-  cycleChart('cyc_v3', D.v3_2024.cycles, D.v3_2025.cycles);
+function populateTradesTable(trades24, trades25) {
+  const tbody = document.getElementById('trades_tbody');
+  if (!tbody) return;
+  const all = [...trades24.map(t => [...t, 2024]), ...trades25.map(t => [...t, 2025])];
+  tbody.innerHTML = all.map((t, i) => {
+    const [date, dir, cycle, h4, entry, sl, tp, result, pnl, num_day, yr] = t;
+    const resBadge = result==='w'
+      ? `<span class="badge badge-green">WIN</span>`
+      : result==='b'
+      ? `<span class="badge badge-yellow">BE</span>`
+      : `<span class="badge badge-red">LOSS</span>`;
+    const dirBadge = dir==='L'
+      ? `<span class="badge badge-blue">LONG</span>`
+      : `<span class="badge badge-red">SHORT</span>`;
+    const pnlClass = pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'yellow';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td>${date}</td>
+      <td style="color:var(--muted);font-size:11px">${yr} T${num_day}</td>
+      <td>${dirBadge}</td>
+      <td style="font-size:11px">${cycle==='N'?'Normal':'Sierra'}</td>
+      <td style="font-family:monospace;font-size:12px">${entry.toFixed(5)}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--red)">${sl.toFixed(5)}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--green)">${tp.toFixed(5)}</td>
+      <td>${resBadge}</td>
+      <td class="${pnlClass}" style="font-weight:600">$${pnl.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+}
 
-  // V4
-  eqChart('eq_v4_2024', D.v4_2024.equity, '#ffa657');
-  eqChart('eq_v4_2025', D.v4_2025.equity, '#39d353');
-  monthlyChart('mo_v4_2024', D.v4_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v4_2025', D.v4_2025.monthly, 'P&L 2025');
-  cycleChart('cyc_v4', D.v4_2024.cycles, D.v4_2025.cycles);
+// ============================================================ LAZY INIT PER TAB
+const _inited = new Set();
+function initTab(id) {
+  if (_inited.has(id)) return;
+  _inited.add(id);
+  if (id === 'v1') {
+    eqChart('eq_v1_2024', D.v1_2024.equity, '#58a6ff');
+    eqChart('eq_v1_2025', D.v1_2025.equity, '#3fb950');
+    monthlyChart('mo_v1_2024', D.v1_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v1_2025', D.v1_2025.monthly, 'P&L 2025');
+    cycleChart('cyc_v1', D.v1_2024.cycles, D.v1_2025.cycles);
+  } else if (id === 'v2') {
+    eqChart('eq_v2_2024', D.v2_2024.equity, '#58a6ff');
+    eqChart('eq_v2_2025', D.v2_2025.equity, '#3fb950');
+    monthlyChart('mo_v2_2024', D.v2_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v2_2025', D.v2_2025.monthly, 'P&L 2025');
+    cycleChart('cyc_v2', D.v2_2024.cycles, D.v2_2025.cycles);
+    levelsWrChart('levels_chart');
+    levelsPnlChart('levels_pnl');
+  } else if (id === 'v3') {
+    eqChart('eq_v3_2024', D.v3_2024.equity, '#bc8cff');
+    eqChart('eq_v3_2025', D.v3_2025.equity, '#ffa657');
+    monthlyChart('mo_v3_2024', D.v3_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v3_2025', D.v3_2025.monthly, 'P&L 2025');
+    cycleChart('cyc_v3', D.v3_2024.cycles, D.v3_2025.cycles);
+  } else if (id === 'v4') {
+    eqChart('eq_v4_2024', D.v4_2024.equity, '#ffa657');
+    eqChart('eq_v4_2025', D.v4_2025.equity, '#39d353');
+    monthlyChart('mo_v4_2024', D.v4_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v4_2025', D.v4_2025.monthly, 'P&L 2025');
+    cycleChart('cyc_v4', D.v4_2024.cycles, D.v4_2025.cycles);
+  } else if (id === 'v5') {
+    eqChart('eq_v5_2024', D.v5_2024.equity, '#bc8cff');
+    eqChart('eq_v5_2025', D.v5_2025.equity, '#ffa657');
+    monthlyChart('mo_v5_2024', D.v5_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v5_2025', D.v5_2025.monthly, 'P&L 2025');
+    compareV4V5('eq_v4v5_2024', D.v4_2024.equity, D.v5_2024.equity, 2024);
+    compareV4V5('eq_v4v5_2025', D.v4_2025.equity, D.v5_2025.equity, 2025);
+  } else if (id === 'v6') {
+    eqChart('eq_v6_2024', D.v6_2024.equity, '#39d353');
+    eqChart('eq_v6_2025', D.v6_2025.equity, '#ffa657');
+    monthlyChart('mo_v6_2024', D.v6_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v6_2025', D.v6_2025.monthly, 'P&L 2025');
+  } else if (id === 'v7') {
+    eqChart('eq_v7_2024', D.v7_2024.equity, '#58a6ff');
+    eqChart('eq_v7_2025', D.v7_2025.equity, '#3fb950');
+    monthlyChart('mo_v7_2024', D.v7_2024.monthly, 'P&L 2024');
+    monthlyChart('mo_v7_2025', D.v7_2025.monthly, 'P&L 2025');
+  } else if (id === 'trades') {
+    scatterTrades('scatter_trades_2024', TV24);
+    scatterTrades('scatter_trades_2025', TV25);
+    populateTradesTable(TV24, TV25);
+  } else if (id === 'comparativa') {
+    compareEq('eq_cmp_2024', D.v1_2024.equity, D.v2_2024.equity, D.v3_2024.equity, 2024);
+    compareEq('eq_cmp_2025', D.v1_2025.equity, D.v2_2025.equity, D.v3_2025.equity, 2025);
+    compareV4V5('eq_cmp_v4v5_2024', D.v4_2024.equity, D.v5_2024.equity, 2024);
+    compareV4V5('eq_cmp_v4v5_2025', D.v4_2025.equity, D.v5_2025.equity, 2025);
+    compareV4V6V7('eq_cmp_v4v6v7_2024', D.v4_2024.equity, D.v6_2024.equity, D.v7_2024.equity, 2024);
+    compareV4V6V7('eq_cmp_v4v6v7_2025', D.v4_2025.equity, D.v6_2025.equity, D.v7_2025.equity, 2025);
+    levelsCmpChart('levels_compare');
+  }
+}
 
-  // V5
-  eqChart('eq_v5_2024', D.v5_2024.equity, '#bc8cff');
-  eqChart('eq_v5_2025', D.v5_2025.equity, '#ffa657');
-  monthlyChart('mo_v5_2024', D.v5_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v5_2025', D.v5_2025.monthly, 'P&L 2025');
-  compareV4V5('eq_v4v5_2024', D.v4_2024.equity, D.v5_2024.equity, 2024);
-  compareV4V5('eq_v4v5_2025', D.v4_2025.equity, D.v5_2025.equity, 2025);
-
-  // V6
-  eqChart('eq_v6_2024', D.v6_2024.equity, '#39d353');
-  eqChart('eq_v6_2025', D.v6_2025.equity, '#ffa657');
-  monthlyChart('mo_v6_2024', D.v6_2024.monthly, 'P&L 2024');
-  monthlyChart('mo_v6_2025', D.v6_2025.monthly, 'P&L 2025');
-
-  // Comparativa V1-V3 (mismo capital $1000)
-  compareEq('eq_cmp_2024', D.v1_2024.equity, D.v2_2024.equity, D.v3_2024.equity, 2024);
-  compareEq('eq_cmp_2025', D.v1_2025.equity, D.v2_2025.equity, D.v3_2025.equity, 2025);
-  // Comparativa V4 vs V5 (mismo capital $200)
-  compareV4V5('eq_cmp_v4v5_2024', D.v4_2024.equity, D.v5_2024.equity, 2024);
-  compareV4V5('eq_cmp_v4v5_2025', D.v4_2025.equity, D.v5_2025.equity, 2025);
-  levelsCmpChart('levels_compare');
-});
+window.addEventListener('DOMContentLoaded', () => initTab('estrategia'));
 
 // ============================================================ TAB LOGIC
 function showTab(id) {
@@ -1589,6 +1869,7 @@ function showTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
+  initTab(id);
 }
 </script>
 </body>
