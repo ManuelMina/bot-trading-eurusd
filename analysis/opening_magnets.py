@@ -30,6 +30,7 @@ def _hm(s: str) -> tuple[int, int]:
 
 
 _M2_HOUR, _M2_MIN = _hm(MAGNET_2_NY)  # 07:30 NY
+_OPEN_HOUR, _OPEN_MIN = 8, 0           # 08:00 NY — precio de apertura para comparar vs 07:30
 
 
 def _get_close_at_ny_time(
@@ -76,6 +77,48 @@ def compute(df: pd.DataFrame) -> pd.DataFrame:
         m2 = _get_close_at_ny_time(df, d, _M2_HOUR, _M2_MIN)
         rows.append({"date": d, "magnet_2": m2})
 
+    return pd.DataFrame(rows)
+
+
+def compute_direction(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcula la direccion diaria del magneto comparando precio 08:00 NY vs 07:30 NY.
+
+    Si precio_08:00 < precio_07:30 → "bullish"  (precio bajo la apertura → busca subir)
+    Si precio_08:00 > precio_07:30 → "bearish"  (precio sobre la apertura → busca bajar)
+    Si igual o datos faltantes    → "neutral"   (no operar ese dia)
+
+    Parameters
+    ----------
+    df : DataFrame M1 (o M5) con columnas datetime (UTC tz-aware), close.
+
+    Returns
+    -------
+    DataFrame con columnas:
+        date              - fecha del dia operativo
+        magnet_2          - precio cierre vela 07:30 NY
+        open_800          - precio cierre vela 08:00 NY
+        magnet_direction  - "bullish" | "bearish" | "neutral"
+    """
+    trade_dates = sorted(df["datetime"].dt.date.unique())
+    rows = []
+    for d in trade_dates:
+        m2   = _get_close_at_ny_time(df, d, _M2_HOUR,   _M2_MIN)
+        o800 = _get_close_at_ny_time(df, d, _OPEN_HOUR, _OPEN_MIN)
+        if m2 is None or o800 is None:
+            direction = "neutral"
+        elif o800 < m2:
+            direction = "bullish"
+        elif o800 > m2:
+            direction = "bearish"
+        else:
+            direction = "neutral"
+        rows.append({
+            "date":             d,
+            "magnet_2":         m2,
+            "open_800":         o800,
+            "magnet_direction": direction,
+        })
     return pd.DataFrame(rows)
 
 

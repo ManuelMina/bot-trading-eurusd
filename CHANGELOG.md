@@ -547,3 +547,28 @@ V3 bloqueaba días completos cuando HTF = neutral. V4 no bloquea días — solo 
 | Fecha | Tipo | Descripción | Razón / Contexto |
 |---|---|---|---|
 | 2026-05-17 | PARÁMETRO | **RISK_PCT: 3% → 1% a partir de las próximas sesiones** | Los backtests V6 y V7 con 3% mostraron MaxDD de 44.2% en 2024 — inaceptable para cuenta de fondeo/prop (que típicamente cierra a 10% DD). Con 1%, el MaxDD proporcional sería ~15% en los mismos escenarios. Todos los backtests futuros (V8+) usarán RISK_PCT = 0.01. Los resultados V1–V7 quedan registrados con 3% y no se recalculan retroactivamente |
+
+---
+
+## 2026-05-17 — Revisión de trades V7 + Hallazgos de análisis manual
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | OBSERVACIÓN | **Sierra vs Retail Heaven — confusión de ciclo (caso 2025-12-17)** | El bot clasificó el día 17/12/25 como Sierra y generó dos entradas SHORT. El análisis manual en M30/H4 muestra que era Retail Heaven: mercado bajista previo → inducción barriendo mínimos del Low Asia del 16/12 → precio busca liquidez arriba (LONG). Son ciclos distintos con implicaciones de dirección opuestas. Pendiente: revisar lógica de `cycle_detector.py` para separar ambos |
+| 2026-05-17 | OBSERVACIÓN | **H4 bias no confiable con datos insuficientes al inicio del día** | A las 09:30 NY del 17/12/25 solo había 1–2 velas H4 del día. El bias calculado era ambiguo y no representativo del contexto real. El bot operó de todas formas. Pendiente: agregar filtro de mínimo de velas H4 antes de calcular bias |
+| 2026-05-17 | OBSERVACIÓN | **SL/TP con distancias grandes — TP 1:3 difícil de alcanzar en mercado real** | En varios trades de 2025, con capital compuesto (~$700+) y 3% de riesgo, el TP quedaba 25–35 pips alejado. El mercado frecuentemente no recorre esa distancia antes de revertir. Analizar si conviene TP parcial (1:1.5 o 1:2) o trailing stop en lugar de 1:3 fijo |
+| 2026-05-17 | DECISIÓN | **Timeframes de análisis cambian: M5 → M15 + M5. Ejecución se mantiene en M1** | El análisis en M5 no siempre captura el contexto direccional del mercado. M15 da mejor visión del ciclo y la estructura. M5 sigue siendo el filtro de señal. M1 es el timeframe de entrada. Esto aplica desde V8 en adelante |
+| 2026-05-17 | DECISIÓN | **Metodología de revisión de trades: análisis manual en M15/M5 antes de ajustar código** | Antes de modificar cualquier módulo (cycle_detector, entry_logic, etc.), se revisarán ejemplos reales del año actual en M15 y M5 para entender el patrón de falla. El objetivo es construir reglas basadas en observación, no en suposición |
+| 2026-05-17 | DECISIÓN | **Magneto 07:30 NY pasa a ser señal diaria de dirección (no comparación por barra)** | En V7 el magneto comparaba precio-actual vs nivel-07:30 en cada vela M1. En V8 se compara precio_08:00 vs precio_07:30 una sola vez por día. Si precio_08:00 < precio_07:30 → bullish (busca LONG). Si precio_08:00 > precio_07:30 → bearish (busca SHORT). Si igual → neutral (no operar). Esto alinea el código con la lógica real de la estrategia |
+| 2026-05-17 | DECISIÓN | **Ventana operativa confirmada: 08:00–10:00 NY** | Análisis manual del día 11/05/26 confirma que la ventana correcta es 08:00–10:00 NY. V7 ya la tenía correcta. V8 la mantiene igual |
+
+---
+
+## 2026-05-17 — Backtest V8
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-17 | RESULTADO | **V8 2024**: 57 trades / WR 26.3% / BE 21.1% / P&L +$30.49 / Capital $230.49 | Con 1% de riesgo. Magneto bearish 32.3% WR vs bullish 19.2% — sesgo bajista da más precisión en 2024 |
+| 2026-05-17 | RESULTADO | **V8 2025**: 60 trades / WR 28.3% / BE 18.3% / P&L +$39.66 / Capital $239.66 | Con 1% de riesgo. T3: 3 trades WR 100%. Magneto bullish 25.6% vs bearish 33.3% |
+| 2026-05-17 | OBSERVACIÓN | **V8 opera menos días que V7** (57 vs 78 en 2024, 60 vs 72 en 2025) | El filtro de magneto diario elimina días sin dirección clara entre 07:30 y 08:00. Esto reduce trades pero mejora WR de 21.8% → 26.3% en 2024 |
+| 2026-05-17 | OBSERVACIÓN | **V8 no es versión final** — pendiente incorporar más lógica de la estrategia aprendida en sesiones de revisión de charts (Retail Heaven, GAP como nivel clave, ciclo Sierra correcto) | Las sesiones de análisis manual con charts reales definirán los próximos ajustes |

@@ -30,7 +30,7 @@ TF_ENTRY    = "M1"
 # Risk management
 # ---------------------------------------------------------------------------
 CAPITAL      = 200.0     # USD
-RISK_PCT     = 0.03      # 3% por trade
+RISK_PCT     = 0.01      # 1% por trade (V8+). V1-V7 usaron 0.03 — resultados ya guardados en CSV
 RISK_REWARD  = 3.0       # TP fijo 1:3
 SL_BUFFER_PIPS = 2       # pips extra sobre el extremo de inducción
 

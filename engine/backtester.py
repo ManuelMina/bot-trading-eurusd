@@ -1885,6 +1885,560 @@ def run_v6(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
     return df
 
 
+# ---------------------------------------------------------------------------
+# Ventana operativa V7 — 08:00-10:00 NY (DST-aware)
+# ---------------------------------------------------------------------------
+
+def _window_v7(trade_date) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Ventana 08:00-10:00 NY -> ((start_h, start_m), (end_h, end_m)) en UTC."""
+    s  = _dt(trade_date.year, trade_date.month, trade_date.day,  8,  0, tzinfo=_TZ_NY_DYN)
+    e  = _dt(trade_date.year, trade_date.month, trade_date.day, 10,  0, tzinfo=_TZ_NY_DYN)
+    su = s.astimezone(_tz.utc)
+    eu = e.astimezone(_tz.utc)
+    return (su.hour, su.minute), (eu.hour, eu.minute)
+
+
+# ---------------------------------------------------------------------------
+# Backtest de un dia — Version 7
+# quarters AND magnets obligatorios + 08:00-10:00 NY + T2 siempre
+# + T3 por resultado + H4 estricto + BE 1.5x + sin filtro noticias
+# ---------------------------------------------------------------------------
+
+def _backtest_day_v7(
+    trade_date: date,
+    m1_day:     pd.DataFrame,
+    htf_bias:   dict,
+    cycle:      str,
+    capital:    float,
+    win_hm:     tuple,  # ((start_h, start_m), (end_h, end_m)) UTC
+) -> tuple[list[dict], float]:
+    """
+    V7: quarters AND magnets obligatorios + ventana 08:00-10:00 NY
+        + T2 siempre independiente de resultado T1
+        + T3 requiere que T2 haya ganado; si T1 perdio, ademas divergencia presente
+        + HTF H4 estricto (bloquea si H4 contradice, neutral OK)
+        + BE 1.5x + sin filtro de noticias.
+
+    T3 gating:
+        T2 win + T1 win/BE  -> T3 con señal estandar (quarters+magnets)
+        T2 win + T1 loss    -> T3 solo si divergencia presente en la señal
+        T2 loss/BE          -> dia terminado, sin T3
+    """
+    from analysis.induction_detector import find_induction
+    from engine.entry_logic import _count_confirmations
+    from engine.position_sizer import calculate
+
+    h4_bias              = htf_bias.get("h4_bias", "neutral")
+    win_start, win_end   = win_hm
+
+    trades       = []
+    trades_today = 0
+    daily_done   = False
+    t1_result    = None
+
+    for bar_idx in range(len(m1_day)):
+        if daily_done:
+            break
+
+        row    = m1_day.iloc[bar_idx]
+        dt_utc = row["datetime"]
+
+        dt_hm = (int(dt_utc.hour), int(dt_utc.minute))
+        if not (win_start <= dt_hm < win_end):
+            continue
+        if bar_idx < EXCELLENCE_BODY_LOOKBACK + 2:
+            continue
+        if bar_idx == 0:
+            continue
+
+        bar_c    = float(row["close"])
+        bar_o    = float(row["open"])
+        bar_body = abs(bar_c - bar_o)
+
+        prev      = m1_day.iloc[bar_idx - 1]
+        prev_body = abs(float(prev["close"]) - float(prev["open"]))
+
+        if bar_body <= prev_body:
+            continue
+
+        direction = "long" if bar_c > bar_o else ("short" if bar_c < bar_o else None)
+        if direction is None:
+            continue
+
+        # HTF H4 estricto: bloquear si H4 contradice la direccion
+        if h4_bias not in ("neutral", direction):
+            continue
+
+        div_r = {"divergence": bool(row.get("div_signal", False)),
+                 "direction":  row.get("div_direction", "")}
+        q_s   = {"signal":    bool(row.get("q_signal", False)),
+                 "direction": row.get("q_direction", None)}
+        mb    = _magnet_bias_from_row(row, bar_c)
+        confs = _count_confirmations(div_r, q_s, mb, direction)
+
+        # V7: requerir quarters AND magnets obligatoriamente
+        if "quarters" not in confs or "magnets" not in confs:
+            continue
+
+        # Induccion: pullback al nivel clave en ventana de 25 barras M1
+        window    = m1_day.iloc[max(0, bar_idx - 25): bar_idx + 1]
+        induction = find_induction(window, direction)
+        if induction is None:
+            continue
+
+        entry   = bar_c
+        sl      = induction["sl_price"]
+        sl_pips = abs(entry - sl) / _PIP
+
+        if sl_pips < 1.0:
+            continue
+        if direction == "long"  and sl >= entry:
+            continue
+        if direction == "short" and sl <= entry:
+            continue
+
+        tp = _tp_price(entry, sl, direction, RISK_REWARD)
+
+        # T3 gating
+        if trades_today == 2:
+            t2_result = trades[1]["result"]
+            if t2_result != "win":
+                continue
+            if t1_result == "loss":
+                has_div = (
+                    bool(row.get("div_signal", False)) and
+                    row.get("div_direction", "") == direction
+                )
+                if not has_div:
+                    continue
+
+        result, exit_p, exit_t, _ = _simulate_trade_be(
+            entry, sl, tp, direction, bar_idx, m1_day
+        )
+        if result == "open":
+            result, exit_p = "loss", sl
+
+        risk_usd = capital * RISK_PCT
+        pnl = (risk_usd * RISK_REWARD if result == "win"
+               else 0.0 if result == "be"
+               else -risk_usd)
+        capital += pnl
+
+        trades.append({
+            "date":            trade_date.isoformat(),
+            "signal_time":     str(dt_utc),
+            "exit_time":       str(exit_t) if exit_t else "",
+            "direction":       direction,
+            "cycle":           cycle,
+            "entry_price":     round(entry,   5),
+            "sl_price":        round(sl,      5),
+            "tp_price":        round(tp,      5),
+            "exit_price":      round(exit_p,  5),
+            "sl_pips":         round(sl_pips, 1),
+            "lots":            calculate(sl_pips=sl_pips, capital=capital),
+            "risk_usd":        round(risk_usd, 2),
+            "result":          result,
+            "pnl_usd":         round(pnl,     2),
+            "capital_after":   round(capital, 2),
+            "trade_num_day":   trades_today + 1,
+            "confirmations":   "|".join(confs),
+            "induction_price": round(induction["induction_price"], 5),
+            "excellence":      False,
+            "h4_bias":         htf_bias.get("h4_bias",  "neutral"),
+            "h1_bias":         htf_bias.get("h1_bias",  "neutral"),
+            "htf_combined":    htf_bias.get("combined", "neutral"),
+        })
+        trades_today += 1
+
+        if trades_today == 1:
+            t1_result = result
+
+        # T2 loss cierra el dia; T3 siempre cierra el dia
+        if trades_today == 2 and result == "loss":
+            daily_done = True
+        elif trades_today >= 3:
+            daily_done = True
+
+    return trades, capital
+
+
+# ---------------------------------------------------------------------------
+# Backtest completo del ano — Version 7
+# ---------------------------------------------------------------------------
+
+def run_v7(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
+    """
+    V7: quarters AND magnets obligatorios + ventana 08:00-10:00 NY (DST-aware)
+        + T2 siempre (sin gate de T1 win) + T3 por resultado + H4 estricto
+        + BE 1.5x + FILTER_KNOCKOUT + sin filtro de noticias.
+    """
+    print(f"\n[BACKTEST V7] Ano {year} -- capital inicial: ${initial_capital:,.2f}")
+
+    from data.fetcher import load
+    from analysis.asia_range import compute as ar_compute
+    from analysis.cycle_detector import compute as cd_compute
+    from analysis.htf_structure import get_htf_bias
+
+    print("  Cargando datos...")
+    m1_eu = load(SYMBOL_MAIN, TF_ENTRY,    year)
+    m5_eu = load(SYMBOL_MAIN, TF_ANALYSIS, year)
+    m5_gu = load(SYMBOL_DIV,  TF_ANALYSIS, year)
+
+    print("  Calculando rango Asia y ciclos...")
+    asia_df   = ar_compute(m1_eu)
+    cycles_df = cd_compute(m5_eu, asia_df)
+
+    print("  Pre-calculando senales M5...")
+    sigs         = _precompute_signals(m5_eu, m5_gu)
+    m1_with_sigs = _attach_to_m1(m1_eu, sigs)
+
+    trading_days = _trading_days(year)
+    print(f"  Dias operativos: {len(trading_days)}")
+
+    all_trades = []
+    capital    = initial_capital
+
+    for i, d in enumerate(trading_days):
+        cycle_row = cycles_df[cycles_df["date"] == d]
+        cycle     = cycle_row.iloc[0]["cycle"] if not cycle_row.empty else "Unknown"
+
+        if cycle == "Unknown":
+            continue
+        if FILTER_KNOCKOUT and cycle == "Knockout":
+            continue
+
+        htf_bias = get_htf_bias(
+            m1_eu, d,
+            sweep_pips=HTF_SWEEP_PIPS,
+            h4_lookback_days=H4_LOOKBACK_DAYS,
+            h1_lookback_bars=H1_LOOKBACK_BARS,
+        )
+
+        win_hm = _window_v7(d)
+
+        day_mask = m1_with_sigs["datetime"].dt.date == d
+        m1_day   = m1_with_sigs[day_mask].reset_index(drop=True)
+        if m1_day.empty:
+            continue
+
+        day_trades, capital = _backtest_day_v7(
+            d, m1_day, htf_bias, cycle, capital, win_hm
+        )
+        all_trades.extend(day_trades)
+
+        if (i + 1) % 50 == 0:
+            print(f"  [{i+1}/{len(trading_days)}] {d} | capital: ${capital:,.2f} | trades: {len(all_trades)}")
+
+    print(f"\n  Trades totales: {len(all_trades)}")
+    print(f"  Capital final:  ${capital:,.2f}")
+    print(f"  P&L total:      ${capital - initial_capital:+,.2f}")
+
+    df = pd.DataFrame(all_trades)
+    if not df.empty:
+        wins  = (df["result"] == "win").sum()
+        bes   = (df["result"] == "be").sum()
+        total = len(df)
+        print(f"  Win rate:       {wins}/{total} = {100*wins/total:.1f}%")
+        print(f"  Break-even:     {bes}/{total} = {100*bes/total:.1f}%")
+        if "h4_bias" in df.columns:
+            for h4_val, g in df.groupby("h4_bias"):
+                w = (g["result"] == "win").sum()
+                t = len(g)
+                print(f"  H4 {h4_val}: {t} trades, WR={100*w/t:.1f}%")
+        for tn, g in df.groupby("trade_num_day"):
+            w = (g["result"] == "win").sum()
+            t = len(g)
+            p = g["pnl_usd"].sum()
+            print(f"  T{tn}: {t} trades, WR={100*w/t:.1f}%, PnL={p:+.2f}")
+
+        out_dir = _RESULTS_DIR / "v7"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"backtest_{year}.csv"
+        df.to_csv(path, index=False)
+        print(f"  [SAVED] {path}")
+
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Backtest de un dia — Version 8
+# Magneto diario: precio_08:00 vs precio_07:30 define direccion del dia
+# Ventana: 08:00-10:00 NY | Riesgo: 1% | BE 1.5x | quarters+magnets obligatorios
+# ---------------------------------------------------------------------------
+
+def _backtest_day_v8(
+    trade_date:       date,
+    m1_day:           pd.DataFrame,
+    htf_bias:         dict,
+    cycle:            str,
+    capital:          float,
+    win_hm:           tuple,
+    magnet_direction: str,   # "bullish" | "bearish" — ya pre-computado al 08:00 NY
+) -> tuple[list[dict], float]:
+    """
+    V8: igual que V7 pero el magneto es una señal diaria (08:00 vs 07:30)
+    en vez de comparacion precio-actual vs nivel por barra.
+
+    magnet_direction pre-computed:
+        "bullish" → precio_08:00 < precio_07:30 → solo LONG tiene confirmacion magneto
+        "bearish" → precio_08:00 > precio_07:30 → solo SHORT tiene confirmacion magneto
+        "neutral" → no operar (caller debe filtrar antes de llamar aqui)
+    """
+    from analysis.induction_detector import find_induction
+    from engine.entry_logic import _count_confirmations
+    from engine.position_sizer import calculate
+
+    h4_bias            = htf_bias.get("h4_bias", "neutral")
+    win_start, win_end = win_hm
+
+    # mb construido una sola vez con la direccion diaria del magneto
+    mb = {"agreement": True, "bias": magnet_direction}
+
+    trades       = []
+    trades_today = 0
+    daily_done   = False
+    t1_result    = None
+
+    for bar_idx in range(len(m1_day)):
+        if daily_done:
+            break
+
+        row    = m1_day.iloc[bar_idx]
+        dt_utc = row["datetime"]
+
+        dt_hm = (int(dt_utc.hour), int(dt_utc.minute))
+        if not (win_start <= dt_hm < win_end):
+            continue
+        if bar_idx < EXCELLENCE_BODY_LOOKBACK + 2:
+            continue
+        if bar_idx == 0:
+            continue
+
+        bar_c    = float(row["close"])
+        bar_o    = float(row["open"])
+        bar_body = abs(bar_c - bar_o)
+
+        prev      = m1_day.iloc[bar_idx - 1]
+        prev_body = abs(float(prev["close"]) - float(prev["open"]))
+
+        if bar_body <= prev_body:
+            continue
+
+        direction = "long" if bar_c > bar_o else ("short" if bar_c < bar_o else None)
+        if direction is None:
+            continue
+
+        # H4 estricto: bloquear si H4 contradice la direccion
+        if h4_bias not in ("neutral", direction):
+            continue
+
+        div_r = {"divergence": bool(row.get("div_signal", False)),
+                 "direction":  row.get("div_direction", "")}
+        q_s   = {"signal":    bool(row.get("q_signal", False)),
+                 "direction": row.get("q_direction", None)}
+        confs = _count_confirmations(div_r, q_s, mb, direction)
+
+        # quarters AND magnets obligatorios
+        if "quarters" not in confs or "magnets" not in confs:
+            continue
+
+        # Induccion en ventana M1 de 25 barras
+        window    = m1_day.iloc[max(0, bar_idx - 25): bar_idx + 1]
+        induction = find_induction(window, direction)
+        if induction is None:
+            continue
+
+        entry   = bar_c
+        sl      = induction["sl_price"]
+        sl_pips = abs(entry - sl) / _PIP
+
+        if sl_pips < 1.0:
+            continue
+        if direction == "long"  and sl >= entry:
+            continue
+        if direction == "short" and sl <= entry:
+            continue
+
+        tp = _tp_price(entry, sl, direction, RISK_REWARD)
+
+        # T3 gating (mismo que V7)
+        if trades_today == 2:
+            t2_result = trades[1]["result"]
+            if t2_result != "win":
+                continue
+            if t1_result == "loss":
+                has_div = (
+                    bool(row.get("div_signal", False)) and
+                    row.get("div_direction", "") == direction
+                )
+                if not has_div:
+                    continue
+
+        result, exit_p, exit_t, _ = _simulate_trade_be(
+            entry, sl, tp, direction, bar_idx, m1_day
+        )
+        if result == "open":
+            result, exit_p = "loss", sl
+
+        risk_usd = capital * RISK_PCT
+        pnl = (risk_usd * RISK_REWARD if result == "win"
+               else 0.0 if result == "be"
+               else -risk_usd)
+        capital += pnl
+
+        trades.append({
+            "date":            trade_date.isoformat(),
+            "signal_time":     str(dt_utc),
+            "exit_time":       str(exit_t) if exit_t else "",
+            "direction":       direction,
+            "cycle":           cycle,
+            "entry_price":     round(entry,   5),
+            "sl_price":        round(sl,      5),
+            "tp_price":        round(tp,      5),
+            "exit_price":      round(exit_p,  5),
+            "sl_pips":         round(sl_pips, 1),
+            "lots":            calculate(sl_pips=sl_pips, capital=capital),
+            "risk_usd":        round(risk_usd, 2),
+            "result":          result,
+            "pnl_usd":         round(pnl,     2),
+            "capital_after":   round(capital, 2),
+            "trade_num_day":   trades_today + 1,
+            "confirmations":   "|".join(confs),
+            "induction_price": round(induction["induction_price"], 5),
+            "excellence":      False,
+            "h4_bias":         htf_bias.get("h4_bias",  "neutral"),
+            "h1_bias":         htf_bias.get("h1_bias",  "neutral"),
+            "htf_combined":    htf_bias.get("combined", "neutral"),
+            "magnet_direction": magnet_direction,
+        })
+        trades_today += 1
+
+        if trades_today == 1:
+            t1_result = result
+
+        if trades_today == 2 and result == "loss":
+            daily_done = True
+        elif trades_today >= 3:
+            daily_done = True
+
+    return trades, capital
+
+
+# ---------------------------------------------------------------------------
+# Backtest completo del ano — Version 8
+# ---------------------------------------------------------------------------
+
+def run_v8(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
+    """
+    V8: magneto diario (08:00 vs 07:30 NY) define direccion + ventana 08:00-10:00 NY
+        + quarters AND magnets obligatorios + H4 estricto + BE 1.5x
+        + T2 siempre + T3 por resultado + RISK_PCT 1%.
+    """
+    print(f"\n[BACKTEST V8] Ano {year} -- capital inicial: ${initial_capital:,.2f}")
+
+    from data.fetcher import load
+    from analysis.asia_range import compute as ar_compute
+    from analysis.cycle_detector import compute as cd_compute
+    from analysis.htf_structure import get_htf_bias
+    from analysis.opening_magnets import compute_direction as mag_dir_compute
+
+    print("  Cargando datos...")
+    m1_eu = load(SYMBOL_MAIN, TF_ENTRY,    year)
+    m5_eu = load(SYMBOL_MAIN, TF_ANALYSIS, year)
+    m5_gu = load(SYMBOL_DIV,  TF_ANALYSIS, year)
+
+    print("  Calculando rango Asia y ciclos...")
+    asia_df   = ar_compute(m1_eu)
+    cycles_df = cd_compute(m5_eu, asia_df)
+
+    print("  Pre-calculando senales M5...")
+    sigs         = _precompute_signals(m5_eu, m5_gu)
+    m1_with_sigs = _attach_to_m1(m1_eu, sigs)
+
+    print("  Pre-calculando direccion magneto 07:30 vs 08:00 NY...")
+    mag_dir_df = mag_dir_compute(m1_eu)   # usa M1 para precision en 08:00
+
+    trading_days = _trading_days(year)
+    print(f"  Dias operativos: {len(trading_days)}")
+
+    all_trades     = []
+    capital        = initial_capital
+    neutral_magnet = 0
+
+    for i, d in enumerate(trading_days):
+        cycle_row = cycles_df[cycles_df["date"] == d]
+        cycle     = cycle_row.iloc[0]["cycle"] if not cycle_row.empty else "Unknown"
+
+        if cycle == "Unknown":
+            continue
+        if FILTER_KNOCKOUT and cycle == "Knockout":
+            continue
+
+        # Direccion diaria del magneto (pre-computada)
+        mag_row          = mag_dir_df[mag_dir_df["date"] == d]
+        magnet_direction = mag_row.iloc[0]["magnet_direction"] if not mag_row.empty else "neutral"
+        if magnet_direction == "neutral":
+            neutral_magnet += 1
+            continue
+
+        htf_bias = get_htf_bias(
+            m1_eu, d,
+            sweep_pips=HTF_SWEEP_PIPS,
+            h4_lookback_days=H4_LOOKBACK_DAYS,
+            h1_lookback_bars=H1_LOOKBACK_BARS,
+        )
+
+        win_hm = _window_v7(d)   # reutiliza la misma funcion: 08:00-10:00 NY
+
+        day_mask = m1_with_sigs["datetime"].dt.date == d
+        m1_day   = m1_with_sigs[day_mask].reset_index(drop=True)
+        if m1_day.empty:
+            continue
+
+        day_trades, capital = _backtest_day_v8(
+            d, m1_day, htf_bias, cycle, capital, win_hm, magnet_direction
+        )
+        all_trades.extend(day_trades)
+
+        if (i + 1) % 50 == 0:
+            print(f"  [{i+1}/{len(trading_days)}] {d} | capital: ${capital:,.2f} | trades: {len(all_trades)}")
+
+    print(f"\n  Dias sin magneto (neutral 08:00=07:30): {neutral_magnet}")
+    print(f"  Trades totales: {len(all_trades)}")
+    print(f"  Capital final:  ${capital:,.2f}")
+    print(f"  P&L total:      ${capital - initial_capital:+,.2f}")
+
+    df = pd.DataFrame(all_trades)
+    if not df.empty:
+        wins  = (df["result"] == "win").sum()
+        bes   = (df["result"] == "be").sum()
+        total = len(df)
+        print(f"  Win rate:       {wins}/{total} = {100*wins/total:.1f}%")
+        print(f"  Break-even:     {bes}/{total} = {100*bes/total:.1f}%")
+        if "h4_bias" in df.columns:
+            for h4_val, g in df.groupby("h4_bias"):
+                w = (g["result"] == "win").sum()
+                t = len(g)
+                print(f"  H4 {h4_val}: {t} trades, WR={100*w/t:.1f}%")
+        for tn, g in df.groupby("trade_num_day"):
+            w = (g["result"] == "win").sum()
+            t = len(g)
+            p = g["pnl_usd"].sum()
+            print(f"  T{tn}: {t} trades, WR={100*w/t:.1f}%, PnL={p:+.2f}")
+        for md, g in df.groupby("magnet_direction"):
+            w = (g["result"] == "win").sum()
+            t = len(g)
+            print(f"  Magneto {md}: {t} trades, WR={100*w/t:.1f}%")
+
+        out_dir = _RESULTS_DIR / "v8"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"backtest_{year}.csv"
+        df.to_csv(path, index=False)
+        print(f"  [SAVED] {path}")
+
+    return df
+
+
 def save_results(df: pd.DataFrame, year: int) -> Path:
     _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     path = _RESULTS_DIR / f"backtest_{year}.csv"
@@ -1903,8 +2457,8 @@ def _parse_args():
                    help="Ano (repetir para multiples: --year 2024 --year 2025)")
     p.add_argument("--capital", type=float, default=CAPITAL,
                    help=f"Capital inicial USD (default: {CAPITAL})")
-    p.add_argument("--version", type=int, default=6, choices=[2, 3, 4, 5, 6],
-                   help="Version: 2=sweep, 3=HTF+induccion+BE, 4=niveles top+HTF veto+BE, 5=sweep+EQH/EQL+HTF+BE, 6=induccion+HTF permisivo+BE+noticias+NY")
+    p.add_argument("--version", type=int, default=8, choices=[2, 3, 4, 5, 6, 7, 8],
+                   help="Version: 2=sweep, 3=HTF+induccion+BE, 4=niveles top+HTF veto+BE, 5=sweep+EQH/EQL+HTF+BE, 6=induccion+HTF permisivo+BE+noticias+NY, 7=quarters+magnets+08-10NY+T2siempre+H4estricto, 8=V7+magneto-diario-08vs07:30+1pct-riesgo")
     return p.parse_args()
 
 
@@ -1912,7 +2466,13 @@ if __name__ == "__main__":
     args  = _parse_args()
     years = args.years or BACKTEST_YEARS
 
-    if args.version == 6:
+    if args.version == 8:
+        runner  = run_v8
+        sub_dir = "v8"
+    elif args.version == 7:
+        runner  = run_v7
+        sub_dir = "v7"
+    elif args.version == 6:
         runner  = run_v6
         sub_dir = "v6"
     elif args.version == 5:
@@ -1931,7 +2491,7 @@ if __name__ == "__main__":
 
     for yr in years:
         df = runner(yr, initial_capital=args.capital)
-        if not df.empty and args.version not in (5, 6):   # V5 y V6 guardan internamente
+        if not df.empty and args.version not in (5, 6, 7, 8):   # V5-V8 guardan internamente
             out_dir = _RESULTS_DIR / sub_dir
             out_dir.mkdir(parents=True, exist_ok=True)
             path = out_dir / f"backtest_{yr}.csv"
