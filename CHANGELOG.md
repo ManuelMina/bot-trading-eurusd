@@ -444,3 +444,30 @@ V3 bloqueaba días completos cuando HTF = neutral. V4 no bloquea días — solo 
 | 2026-05-16 | OBSERVACIÓN | **V6 vs V4 en 2025**: V4 +$204.48 / MaxDD 8.7% vs V6 +$65.06 / MaxDD 43.9% — V4 claramente superior en 2025 | V4 selectividad extrema (2 niveles, 23 trades) sigue siendo más rentable y segura que V6 inducción genérica |
 | 2026-05-16 | OBSERVACIÓN | **V6 2025: MaxDD de 43.9% no aceptable para cuenta real** — pico de $422 → piso de $244 (perder 42% del pico) | Una cuenta prop/fondeo típicamente cierra a 10% drawdown. V6 no es apto para uso en vivo aún |
 | 2026-05-16 | DECISIÓN | **V4 sigue siendo producción; V6 queda como experimento de base** — documentado como versión de referencia para futuras mejoras de señal de inducción | V6 demuestra que la inducción + controles funciona en 2024 pero no escala bien a 2025. Próxima línea de investigación: filtrar inductiones con criterio adicional (ej: solo si Asia range fue >15 pips, o solo si hay divergencia activa) |
+
+---
+
+## 2026-05-16 (continuación) — Corrección: solo magneto 07:30 NY
+
+### Implementación y re-backtest
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | CORRECCIÓN | **Eliminar magneto 00:00 NY** — solo usar magneto 07:30 NY en todo el sistema | El diagrama mostraba ambos magnetos aplicados ("Magnetos 00:00 NY · 07:30 NY · AMBOS"). Solo el de 07:30 NY es operativamente relevante |
+| 2026-05-16 | CORRECCIÓN | `opening_magnets.py`: calcula solo magnet_2 (07:30 NY), elimina magnet_1 (00:00 NY). Importa solo `MAGNET_2_NY` | Módulo simplificado — una sola columna de salida: "magnet_2" |
+| 2026-05-16 | CORRECCIÓN | `backtester.py` — `_magnet_bias_from_row()`: solo lee magnet_2, nunca magnet_1. Elimina lógica "conflict" | Con un solo magneto el bias es siempre claro (bullish/bearish/neutral si no hay nivel) |
+| 2026-05-16 | CORRECCIÓN | `backtester.py` — `run_v2/v4/v5`: pasan `None` como mag1 en `build_day_levels()`, eliminan lectura de magnet_1 del DataFrame | Evitar KeyError si el campo no existe en el CSV de magnetos |
+| 2026-05-16 | CORRECCIÓN | `config.py`: elimina `MAGNET_1_NY = "00:00"`, deja solo `MAGNET_2_NY = "07:30"` | Consistencia: solo un magneto en toda la configuración |
+| 2026-05-16 | CORRECCIÓN | `CLAUDE.md`: elimina `MAGNET_1_NY = "00:00"` de la tabla de parámetros | Documentación en sync con el código |
+| 2026-05-16 | CORRECCIÓN | `docs/index.html` SVG diagrama: "Magnetos 00:00 NY · 07:30 NY / Peso 1 · AMBOS" → "Magneto 07:30 NY / Peso 1" | Diagrama ahora refleja la realidad del bot |
+
+### Re-backtest post-corrección (V4 y V6)
+
+| Fecha | Tipo | Descripción | Razón / Contexto |
+|---|---|---|---|
+| 2026-05-16 | RESULTADO | **V4 2024 post-fix**: sin cambio — 27 trades / WR 18.5% / P&L +$0.88 / MaxDD 17.1% | V4 usa sweep-based, el magneto solo es 4a confirmación opcional. Sin impacto |
+| 2026-05-16 | RESULTADO | **V4 2025 post-fix**: 24 trades (era 23) / WR 45.8% (era 47.8%) / P&L **+$192.34** (era +$204.48) / MaxDD 8.7% | Un trade extra habilitado por la corrección del magneto; resultado ligeramente menor |
+| 2026-05-16 | RESULTADO | **V6 2024 post-fix**: 105 trades (era 100) / WR 23.8% (era 25.0%) / P&L **+$77.33** (era +$122.95) / MaxDD 28.8% | Más trades, peor resultado — con dos magnetos en conflicto se filtraban más setups malos |
+| 2026-05-16 | RESULTADO | **V6 2025 post-fix**: 100 trades (era 93) / WR 23.0% (era 23.7%) / P&L **+$33.42** (era +$65.06) / MaxDD 44.2% | Misma tendencia: magneto único genera más setups, pero de peor calidad en promedio |
+| 2026-05-16 | OBSERVACIÓN | **El "conflicto" entre ambos magnetos era un filtro implícito de calidad** — cuando 00:00 NY y 07:30 NY apuntaban en direcciones opuestas, el trade no recibía confirmación magneto → menos trades → mejores trades | La corrección es correcta (solo usar 07:30 NY es la regla de la estrategia), pero revela que el conflicto accidentalmente filtraba malos setups. Pendiente: evaluar si añadir otro filtro explícito compensa esta pérdida |
+| 2026-05-16 | DECISIÓN | **V4 sigue siendo producción con resultados ligeramente ajustados** — V4 2025: +$192.34 / MaxDD 8.7% (antes +$204.48). El sistema sigue siendo sólido | La diferencia mínima confirma que V4 no dependía de la ambigüedad del magneto |

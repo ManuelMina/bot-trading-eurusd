@@ -55,7 +55,6 @@ from config import (
     TF_ANALYSIS,
     TF_ENTRY,
     TRADING_T3_CUTOFF,
-    TZ_COLOMBIA,
 )
 
 _PIP = 0.0001
@@ -198,21 +197,11 @@ def _simulate_trade(
 # ---------------------------------------------------------------------------
 
 def _magnet_bias_from_row(row: pd.Series, price: float) -> dict:
-    def _side(lvl):
-        if lvl is None or (isinstance(lvl, float) and np.isnan(lvl)):
-            return None
-        return "bullish" if price < lvl else "bearish"
-
-    b1 = _side(row.get("magnet_1"))
-    b2 = _side(row.get("magnet_2"))
-    avail = [b for b in (b1, b2) if b is not None]
-    if not avail:
-        return {"magnet_1": None, "magnet_2": None, "agreement": False, "bias": "neutral"}
-    if len(avail) == 1:
-        return {"magnet_1": b1, "magnet_2": b2, "agreement": True, "bias": avail[0]}
-    agreement = b1 == b2
-    return {"magnet_1": b1, "magnet_2": b2, "agreement": agreement,
-            "bias": b1 if agreement else "conflict"}
+    lvl = row.get("magnet_2")
+    if lvl is None or (isinstance(lvl, float) and np.isnan(lvl)):
+        return {"magnet_2": None, "agreement": False, "bias": "neutral"}
+    bias = "bullish" if price < float(lvl) else "bearish"
+    return {"magnet_2": bias, "agreement": True, "bias": bias}
 
 
 def _count_confirmations_v2(
@@ -851,7 +840,7 @@ def run(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
     daily_hl  = precompute_daily_hl(m1_eu)
     weekly_hl = precompute_weekly_hl(m1_eu)
     gaps_df   = detect_weekly_gaps(m1_eu, min_pips=GAP_MIN_PIPS)
-    mag_df    = mag_compute(m5_eu)   # date, magnet_1, magnet_2
+    mag_df    = mag_compute(m5_eu)   # date, magnet_2
 
     trading_days = _trading_days(year)
     print(f"  Dias operativos: {len(trading_days)}")
@@ -869,9 +858,8 @@ def run(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
         if FILTER_KNOCKOUT and cycle == "Knockout":
             continue
 
-        # Magnetos del dia
+        # Magneto 07:30 NY
         mag_row = mag_df[mag_df["date"] == d]
-        mag1 = float(mag_row.iloc[0]["magnet_1"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_1"]) else None
         mag2 = float(mag_row.iloc[0]["magnet_2"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_2"]) else None
 
         # Gap semanal como 4a confirmacion
@@ -879,7 +867,7 @@ def run(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
 
         # Catalogo de niveles del dia
         day_levels = build_day_levels(
-            d, asia, mag1, mag2, daily_hl, weekly_hl,
+            d, asia, None, mag2, daily_hl, weekly_hl,
             min_weight=MIN_SWEEP_WEIGHT, max_weight=MAX_LEVEL_WEIGHT,
         )
 
@@ -1193,11 +1181,10 @@ def run_v4(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
         gap_bias = get_gap_bias(gaps_df, d)
 
         mag_row = mag_df[mag_df["date"] == d]
-        mag1 = float(mag_row.iloc[0]["magnet_1"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_1"]) else None
         mag2 = float(mag_row.iloc[0]["magnet_2"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_2"]) else None
 
         day_levels = build_day_levels(
-            d, asia, mag1, mag2, daily_hl, weekly_hl,
+            d, asia, None, mag2, daily_hl, weekly_hl,
             min_weight=MIN_SWEEP_WEIGHT, max_weight=MAX_LEVEL_WEIGHT,
         )
 
@@ -1313,7 +1300,7 @@ def _backtest_day_v5(
     sw_body    = 0.0
 
     sweep_pips  = SWEEP_MIN_PIPS * _PIP
-    _neutral_mb = {"magnet_1": None, "magnet_2": None, "agreement": False, "bias": "neutral"}
+    _neutral_mb = {"magnet_2": None, "agreement": False, "bias": "neutral"}
 
     for bar_idx in range(len(m1_day)):
         if daily_done:
@@ -1557,11 +1544,10 @@ def run_v5(year: int, initial_capital: float = CAPITAL) -> pd.DataFrame:
         gap_bias = get_gap_bias(gaps_df, d)
 
         mag_row = mag_df[mag_df["date"] == d]
-        mag1 = float(mag_row.iloc[0]["magnet_1"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_1"]) else None
         mag2 = float(mag_row.iloc[0]["magnet_2"]) if not mag_row.empty and pd.notna(mag_row.iloc[0]["magnet_2"]) else None
 
         day_levels = build_day_levels(
-            d, asia, mag1, mag2, daily_hl, weekly_hl,
+            d, asia, None, mag2, daily_hl, weekly_hl,
             min_weight=MIN_SWEEP_WEIGHT, max_weight=MAX_LEVEL_WEIGHT,
         )
 
